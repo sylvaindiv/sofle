@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VialRGB — Éditeur par touche</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#161b22;
+    --border:#30363d;
+    --text:#e6edf3;
+    --muted:#8b949e;
+    --accent:#39d0ff;
+    --accent2:#ff9f43;
+    --danger:#ff6b6b;
+    --ok:#3fb950;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"SF Mono","JetBrains Mono","Fira Code",Consolas,monospace;
+    padding:24px;
+  }
+  h1{
+    font-size:18px;
+    letter-spacing:.02em;
+    margin:0 0 4px 0;
+    color:var(--accent);
+  }
+  .sub{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:20px;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns:1fr 300px;
+    gap:20px;
+    max-width:1100px;
+  }
+  @media (max-width: 860px){
+    .layout{grid-template-columns:1fr;}
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px;
+  }
+  .toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  button{
+    background:#21262d;
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:8px 12px;
+    font-family:inherit;
+    font-size:13px;
+    cursor:pointer;
+  }
+  button:hover{border-color:var(--accent);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  button.primary{background:var(--accent);color:#00202b;border-color:var(--accent);font-weight:600;}
+  button.primary:hover{filter:brightness(1.1);}
+  button.warn{border-color:var(--accent2);}
+  #status{
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:12px;
+    min-height:18px;
+  }
+  #status.ok{color:var(--ok);}
+  #status.err{color:var(--danger);}
+  #board{
+    position:relative;
+    width:100%;
+    aspect-ratio:2/1;
+    background:#010409;
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    user-select:none;
+  }
+  .led{
+    position:absolute;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    border:2px solid #30363d;
+    transform:translate(-50%,-50%);
+    cursor:pointer;
+    box-shadow:0 0 6px rgba(0,0,0,.6);
+  }
+  .led.matrix{border-radius:6px;}
+  .led:hover{border-color:var(--accent);}
+  .led.selected{border-color:#fff;box-shadow:0 0 0 2px var(--accent);}
+  .led-label{
+    position:absolute;
+    top:100%;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:9px;
+    color:var(--muted);
+    white-space:nowrap;
+    pointer-events:none;
+  }
+  .side-title{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--muted);
+    margin:0 0 10px 0;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  input[type=color]{
+    width:100%;
+    height:38px;
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:none;
+    padding:2px;
+  }
+  input[type=range]{width:100%;}
+  input[type=text], select{
+    width:100%;
+    background:#0d1117;
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:8px 10px;
+    font-family:inherit;
+    font-size:13px;
+  }
+  .row{display:flex;gap:8px;}
+  .row > *{flex:1;}
+  hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+  .hint{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .preset-grid{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:6px;
+    margin-bottom:14px;
+  }
+  .swatch{
+    aspect-ratio:1;
+    border-radius:4px;
+    border:1px solid var(--border);
+    cursor:pointer;
+  }
+  .swatch:hover{outline:2px solid var(--accent);}
+  code{
+    background:#000;
+    padding:1px 5px;
+    border-radius:4px;
+    font-size:12px;
+  }
+</style>
+</head>
+<body>
+
+<h1>VialRGB — Éditeur par touche</h1>
+<div class="sub">Contrôle direct des LEDs via WebHID · Sofle Choc Pro (KeeBart) et tout clavier VialRGB · Chrome / Edge uniquement</div>
+
+<div class="layout">
+
+  <div class="panel">
+    <div class="toolbar">
+      <button id="btnConnect" class="primary">Connecter le clavier</button>
+      <button id="btnTestRed" disabled class="warn">Test rapide : toutes les LEDs = rouge</button>
+      <button id="btnDebug" disabled class="warn">Debug interne firmware</button>
+      <button id="btnRefresh" disabled>Recharger les LEDs</button>
+      <select id="layerSelect" disabled style="max-width:150px;">
+        <option value="0">Layer BASE</option>
+        <option value="1">Layer LOWER</option>
+        <option value="2">Layer RAISE</option>
+      </select>
+      <button id="btnApply" disabled>Appliquer sur le clavier</button>
+      <button id="btnSaveEeprom" disabled class="warn">Enregistrer définitivement sur le clavier</button>
+      <button id="btnExport">Exporter config (.json)</button>
+      <button id="btnImport">Importer config (.json)</button>
+      <input type="file" id="fileInput" accept="application/json" style="display:none">
+    </div>
+    <div id="status">Non connecté.</div>
+    <div id="board"></div>
+    <div class="hint" style="margin-top:10px;">
+      Clique une LED pour l'ajouter/retirer de la sélection (plusieurs à la fois possible), choisis une couleur à droite — elle s'applique à toute la sélection. Les touches carrées = LEDs de matrice (per-key). Les ronds = underglow. La config est sauvegardée automatiquement dans ce navigateur (<code>localStorage</code>) et peut être exportée en fichier pour la réutiliser ailleurs.
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="side-title">Sélection</div>
+    <div id="selInfo" class="hint" style="margin-bottom:12px;">Aucune touche sélectionnée.</div>
+
+    <div class="field">
+      <label>Couleur</label>
+      <input type="color" id="colorPicker" value="#39d0ff" disabled>
+    </div>
+
+    <div class="field">
+      <label>Luminosité (<span id="vVal">180</span>)</label>
+      <input type="range" id="vSlider" min="0" max="180" value="180" disabled>
+    </div>
+
+    <div class="side-title" style="margin-top:0;">Couleurs récentes</div>
+    <div class="preset-grid" id="recents"></div>
+
+    <div class="side-title">Presets</div>
+    <div class="preset-grid" id="presets"></div>
+
+    <div class="row" style="margin-bottom:14px;">
+      <button id="btnApplyAll">Appliquer à toutes les LEDs</button>
+      <button id="btnApplyMatrix">Appliquer aux touches</button>
+    </div>
+
+    <hr>
+    <div class="side-title">Configurations sauvegardées</div>
+    <div class="hint" style="margin-bottom:10px;">Sauvegarde tout le board affiché (ex: une par layer) pour le recharger et le retoucher plus tard sans repartir de zéro.</div>
+    <div class="row" style="margin-bottom:8px;">
+      <input type="text" id="presetName" placeholder="Nom (ex: Layer BASE)">
+      <button id="btnSavePreset">Enregistrer</button>
+    </div>
+    <div class="row" style="margin-bottom:8px;">
+      <select id="presetSelect"><option value="">— choisir —</option></select>
+      <button id="btnLoadPreset">Charger</button>
+      <button id="btnDeletePreset">Supprimer</button>
+    </div>
+    <div class="hint" style="margin-bottom:8px;">
+      Ça reste dans ce navigateur (survit aux rechargements de page, mais pas à un "effacer les données de navigation"). Pour un vrai backup sur disque :
+    </div>
+    <div class="row" style="margin-bottom:14px;">
+      <button id="btnExportPresets">Exporter toutes (.json)</button>
+      <button id="btnImportPresets">Importer (.json)</button>
+      <input type="file" id="presetsFileInput" accept="application/json" style="display:none">
+    </div>
+
+    <hr>
+    <div class="side-title">Statut</div>
+    <div class="hint" id="deviceInfo">—</div>
+  </div>
+
+</div>
+
+<script>
+const MSG_LEN = 32;
+const RGB_MAX_V = 180; // must match RGB_MATRIX_MAXIMUM_BRIGHTNESS in the firmware
+const CMD_VIA_DYNAMIC_KEYMAP_GET_KEYCODE = 0x04;
+const CMD_VIA_LIGHTING_SET_VALUE = 0x07;
+const CMD_VIA_LIGHTING_GET_VALUE = 0x08;
+const VIALRGB_GET_INFO = 0x40;
+const VIALRGB_GET_MODE = 0x41;
+const VIALRGB_GET_SUPPORTED = 0x42;
+const VIALRGB_GET_NUMBER_LEDS = 0x43;
+const VIALRGB_GET_LED_INFO = 0x44;
+const VIALRGB_SET_MODE = 0x41;
+const VIALRGB_DIRECT_FASTSET = 0x42;
+const VIALRGB_EFFECT_DIRECT = 1;
+const CMD_RGB_LAYER_GET = 0xF3;
+const CMD_RGB_LAYER_SET = 0xF4;
+const LAYER_NAMES = ['BASE', 'LOWER', 'RAISE'];
+const STORAGE_KEY = "vialrgb_editor_config_v1";
+
+let device = null;
+let pending = null;
+let leds = [];
+let selectedLeds = [];
+let currentLayer = 0;
+let layerCache = [{}, {}, {}]; // idx -> {h,s,v}, un par layer matériel
+
+const statusEl = document.getElementById('status');
+const boardEl = document.getElementById('board');
+const deviceInfoEl = document.getElementById('deviceInfo');
+const selInfoEl = document.getElementById('selInfo');
+const colorPicker = document.getElementById('colorPicker');
+const vSlider = document.getElementById('vSlider');
+const vVal = document.getElementById('vVal');
+
+function setStatus(msg, kind){
+  statusEl.textContent = msg;
+  statusEl.className = kind || '';
+}
+
+function timeout(ms){
+  return new Promise(resolve => setTimeout(() => resolve(null), ms));
+}
+
+function toHex(bytes){
+  return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join(' ');
+}
+
+async function hidSend(bytes, retries = 1){
+  const buf = new Uint8Array(MSG_LEN);
+  buf.set(bytes.slice(0, MSG_LEN));
+  console.log('[send]', toHex(buf));
+  let lastErr = null;
+  for (let i = 0; i < retries; i++){
+    const respPromise = new Promise(resolve => { pending = resolve; });
+    try{
+      await device.sendReport(0x00, buf);
+    }catch(e){
+      lastErr = e;
+      await timeout(50);
+      continue;
+    }
+    const resp = await Promise.race([respPromise, timeout(500)]);
+    pending = null;
+    if (resp){
+      console.log('[recv]', toHex(resp));
+      return resp;
+    }
+    console.log('[recv] timeout, retry', i+1, '/', retries);
+  }
+  throw new Error("Pas de réponse du clavier (" + (lastErr ? lastErr.message : 'timeout') + ")");
+}
+
+function onInputReport(e){
+  if (pending){
+    const data = new Uint8Array(e.data.buffer, e.data.byteOffset, e.data.byteLength);
+    const resolve = pending;
+    pending = null;
+    resolve(data);
+  }
+}
+
+async function connect(){
+  if (!('hid' in navigator)){
+    setStatus("WebHID indisponible — utilise Chrome ou Edge.", 'err');
+    return;
+  }
+  try{
+    const devices = await navigator.hid.requestDevice({
+      filters: [{ usagePage: 0xFF60, usage: 0x61 }]
+    });
+    if (!devices.length){
+      setStatus("Aucun clavier sélectionné.", 'err');
+      return;
+    }
+    device = devices[0];
+    if (!device.opened) await device.open();
+    device.addEventListener('inputreport', onInputReport);
+
+    setStatus("Connecté à " + device.productName + ", vérification du protocole…");
+
+    // Check VialRGB support (0xFE 0x00 = vial info command)
+    const info = await hidSend(new Uint8Array([0xFE, 0x00]), 5);
+    const view = new DataView(info.buffer, info.byteOffset, info.byteLength);
+    const vialProtocol = view.getUint32(0, true);
+    const flags = view.getUint8(12);
+    if (vialProtocol < 4) throw new Error("Firmware Vial trop ancien (protocole < 4)");
+    if ((flags & 1) !== 1) throw new Error("Ce clavier n'expose pas VialRGB (firmware sans VIALRGB_ENABLE ?)");
+
+    deviceInfoEl.textContent = device.productName + " · protocole Vial v" + vialProtocol;
+    document.getElementById('btnTestRed').disabled = false;
+    document.getElementById('btnDebug').disabled = false;
+
+    await loadLeds();
+    setStatus("Prêt — " + leds.length + " LEDs chargées.", 'ok');
+    document.getElementById('btnRefresh').disabled = false;
+    document.getElementById('btnApply').disabled = false;
+    document.getElementById('btnSaveEeprom').disabled = false;
+    document.getElementById('layerSelect').disabled = false;
+  }catch(e){
+    setStatus("Erreur : " + e.message, 'err');
+  }
+}
+
+// Envoie mode Direct + couleurs pour une liste d'entrées {idx,h,s,v}. Utilisé
+// par "Appliquer sur le clavier" ET par le bouton de test rapide.
+async function applyColors(entries){
+  const msg = new Uint8Array([CMD_VIA_LIGHTING_SET_VALUE, VIALRGB_SET_MODE,
+    VIALRGB_EFFECT_DIRECT & 0xFF, (VIALRGB_EFFECT_DIRECT >> 8) & 0xFF, 128,128,128,128]);
+  await hidSend(msg, 20);
+
+  const SEND_PER_PACKET = 9;
+  let sent = 0;
+  while (sent < entries.length){
+    const batch = entries.slice(sent, sent + SEND_PER_PACKET);
+    const firstIdx = batch[0].idx;
+    const header = new Uint8Array([CMD_VIA_LIGHTING_SET_VALUE, VIALRGB_DIRECT_FASTSET, firstIdx & 0xFF, (firstIdx >> 8) & 0xFF, batch.length]);
+    const colors = new Uint8Array(batch.length * 3);
+    batch.forEach((l, i) => { colors[i*3] = l.h; colors[i*3+1] = l.s; colors[i*3+2] = l.v; });
+    const payload = new Uint8Array(header.length + colors.length);
+    payload.set(header, 0); payload.set(colors, header.length);
+    await hidSend(payload);
+    sent += batch.length;
+  }
+}
+
+document.getElementById('btnSaveEeprom').addEventListener('click', async () => {
+  try{
+    setStatus("Enregistrement en EEPROM…");
+    const resp = await hidSend(new Uint8Array([0xF1]));
+    setStatus(resp[1] === 1 ? "Couleurs enregistrées définitivement sur le clavier." : "Échec de l'enregistrement.", resp[1] === 1 ? 'ok' : 'err');
+  }catch(e){
+    setStatus("Erreur : " + e.message, 'err');
+  }
+});
+
+document.getElementById('btnDebug').addEventListener('click', async () => {
+  try{
+    setStatus("Lecture de l'état interne du firmware…");
+    const d = await hidSend(new Uint8Array([0xF0]));
+    const report =
+      "enabled=" + d[1] +
+      " · mode_actif=" + d[2] +
+      " · id_direct_attendu=" + d[3] +
+      " · nb_effets_max=" + d[4] +
+      " · led0(h,s,v)=" + d[5] + "," + d[6] + "," + d[7] +
+      " · led30(h,s,v)=" + d[8] + "," + d[9] + "," + d[10];
+    setStatus(report, d[2] === d[3] ? 'ok' : 'err');
+  }catch(e){
+    setStatus("Erreur au debug : " + e.message, 'err');
+  }
+});
+
+document.getElementById('btnTestRed').addEventListener('click', async () => {
+  try{
+    setStatus("Test : lecture du nombre de LEDs…");
+    const countResp = await hidSend(new Uint8Array([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_NUMBER_LEDS]));
+    const numLeds = countResp[2] | (countResp[3] << 8);
+    setStatus("Envoi : " + numLeds + " LEDs = rouge…");
+    const all = Array.from({ length: numLeds }, (_, i) => ({ idx: i, h: 0, s: 255, v: 255 }));
+    await applyColors(all);
+
+    // Relit l'état réel du clavier après la commande (pas ce qu'on a envoyé,
+    // ce que le firmware dit avoir appliqué) — pour savoir si le mode Direct
+    // a vraiment pris, sans dépendre de ce qui s'allume visuellement.
+    const modeResp = await hidSend(new Uint8Array([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_MODE]));
+    const activeMode = modeResp[2] | (modeResp[3] << 8);
+    const modeOk = activeMode === VIALRGB_EFFECT_DIRECT;
+    setStatus("Envoyé pour " + numLeds + " LEDs. Mode relu sur le clavier : " + activeMode +
+      (modeOk ? " (Direct — OK)" : " (PAS Direct — le mode n'a pas pris !)"), modeOk ? 'ok' : 'err');
+  }catch(e){
+    setStatus("Erreur au test : " + e.message, 'err');
+  }
+});
+
+// Le fetch du keycode par touche (pour l'affichage) est lent (round-trip HID
+// par touche) et pas nécessaire pour la couleur — on le fait à la demande
+// (sélection d'une touche) plutôt qu'en boucle sur les 60 LEDs au chargement.
+async function loadLeds(){
+  const countResp = await hidSend(new Uint8Array([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_NUMBER_LEDS]));
+  const numLeds = countResp[2] | (countResp[3] << 8);
+
+  leds = [];
+  selectedLeds = [];
+  updateSelectionUI();
+  for (let idx = 0; idx < numLeds; idx++){
+    setStatus("Chargement LED " + (idx + 1) + "/" + numLeds + "…");
+    const msg = new Uint8Array([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_LED_INFO, idx & 0xFF, (idx >> 8) & 0xFF]);
+    const d = await hidSend(msg);
+    const x = d[2], y = d[3], ledFlags = d[4], rowRaw = d[5], colRaw = d[6];
+    const row = rowRaw === 0xFF ? null : rowRaw;
+    const col = colRaw === 0xFF ? null : colRaw;
+    const key = row !== null ? (row + "_" + col) : ("u" + idx);
+    leds.push({ idx, x, y, flags: ledFlags, row, col, keycode: null, h: 0, s: 0, v: 0, key });
+  }
+
+  // Récupère les couleurs réellement peintes sur le clavier pour les 3
+  // layers, pour ne jamais repartir de zéro. Fallback sur le cache local du
+  // navigateur si le firmware ne connaît pas encore ces commandes (ancien
+  // firmware sans RGB_LAYER_GET_CMD/RGB_LAYER_SET_CMD).
+  layerCache = [{}, {}, {}];
+  for (let layer = 0; layer < 3; layer++){
+    setStatus("Lecture des couleurs — layer " + LAYER_NAMES[layer] + "…");
+    const fromHw = await fetchLayerColors(layer);
+    layerCache[layer] = fromHw || loadSavedConfigForLayer(layer);
+  }
+  applyLayerCacheToLeds(currentLayer);
+  renderBoard();
+}
+
+// Lit les couleurs d'un layer directement depuis rgb_layer_colors[layer] en
+// RAM sur le clavier (peu importe le layer actif) par paquets de 9 LEDs.
+// Renvoie null si le firmware ne supporte pas la commande (réponse "id_unhandled").
+async function fetchLayerColors(layer){
+  const result = {};
+  const BATCH = 9;
+  for (let i = 0; i < leds.length; i += BATCH){
+    const count = Math.min(BATCH, leds.length - i);
+    const req = new Uint8Array([CMD_RGB_LAYER_GET, layer, i & 0xFF, (i >> 8) & 0xFF, count]);
+    const resp = await hidSend(req);
+    if (resp[0] === 0xFF) return null;
+    for (let j = 0; j < count; j++){
+      result[i + j] = { h: resp[5 + j*3], s: resp[5 + j*3 + 1], v: resp[5 + j*3 + 2] };
+    }
+  }
+  return result;
+}
+
+// Écrit les couleurs d'un layer directement dans rgb_layer_colors[layer] en
+// RAM sur le clavier (peu importe le layer actif), par paquets de 9 LEDs.
+async function applyLayerColors(layer, entries){
+  const BATCH = 9;
+  let sent = 0;
+  while (sent < entries.length){
+    const batch = entries.slice(sent, sent + BATCH);
+    const firstIdx = batch[0].idx;
+    const header = new Uint8Array([CMD_RGB_LAYER_SET, layer, firstIdx & 0xFF, (firstIdx >> 8) & 0xFF, batch.length]);
+    const colors = new Uint8Array(batch.length * 3);
+    batch.forEach((l, i) => { colors[i*3] = l.h; colors[i*3+1] = l.s; colors[i*3+2] = l.v; });
+    const payload = new Uint8Array(header.length + colors.length);
+    payload.set(header, 0); payload.set(colors, header.length);
+    await hidSend(payload);
+    sent += batch.length;
+  }
+}
+
+function currentLayerCfgByIdx(){
+  const cfg = {};
+  leds.forEach(l => { cfg[l.idx] = { h: l.h, s: l.s, v: l.v }; });
+  return cfg;
+}
+function applyLayerCacheToLeds(layer){
+  const cache = layerCache[layer];
+  leds.forEach(l => {
+    const c = cache[l.idx];
+    if (c){ l.h = c.h; l.s = c.s; l.v = c.v; }
+  });
+}
+
+document.getElementById('layerSelect').addEventListener('change', (e) => {
+  // Garde les modifs en cours (même pas encore envoyées au clavier) avant de changer de layer.
+  layerCache[currentLayer] = currentLayerCfgByIdx();
+  currentLayer = parseInt(e.target.value, 10);
+  applyLayerCacheToLeds(currentLayer);
+  renderBoard();
+  selectedLeds = [];
+  updateSelectionUI();
+  setStatus("Layer " + LAYER_NAMES[currentLayer] + " — " + leds.length + " LEDs.", 'ok');
+});
+
+function renderBoard(){
+  boardEl.innerHTML = '';
+  if (!leds.length) return;
+  const xs = leds.map(l => l.x), ys = leds.map(l => l.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanX = Math.max(1, maxX - minX);
+  const spanY = Math.max(1, maxY - minY);
+
+  leds.forEach(led => {
+    const el = document.createElement('div');
+    el.className = 'led' + (led.row !== null ? ' matrix' : '');
+    const px = 6 + ((led.x - minX) / spanX) * 88;
+    const py = 10 + ((led.y - minY) / spanY) * 78;
+    el.style.left = px + '%';
+    el.style.top = py + '%';
+    el.style.background = hsvToHex(led.h, led.s, led.v || 40);
+    el.title = led.row !== null ? ("row " + led.row + " col " + led.col) : ("underglow #" + led.idx);
+    el.addEventListener('mousedown', (e) => { e.preventDefault(); startDragSelect(led, el); });
+    el.addEventListener('mouseenter', () => { if (isDragSelecting) dragSelectLed(led, el); });
+    led._el = el;
+    boardEl.appendChild(el);
+  });
+}
+
+// Sélection multiple par glisser : mousedown sur une touche démarre le geste
+// (bascule cette touche et fixe si le glissé ajoute ou retire), mouseenter
+// sur les autres touches pendant le glissé applique la même action. Clic
+// dans le vide du board désélectionne tout.
+let isDragSelecting = false;
+let dragAdding = true;
+
+function setLedSelected(led, el, selected){
+  const idx = selectedLeds.indexOf(led);
+  if (selected && idx === -1){
+    selectedLeds.push(led);
+    el.classList.add('selected');
+  }else if (!selected && idx !== -1){
+    selectedLeds.splice(idx, 1);
+    el.classList.remove('selected');
+  }
+}
+
+function startDragSelect(led, el){
+  isDragSelecting = true;
+  dragAdding = !selectedLeds.includes(led);
+  setLedSelected(led, el, dragAdding);
+  updateSelectionUI();
+}
+
+function dragSelectLed(led, el){
+  setLedSelected(led, el, dragAdding);
+  updateSelectionUI();
+}
+
+document.addEventListener('mouseup', () => { isDragSelecting = false; });
+
+boardEl.addEventListener('mousedown', (e) => {
+  if (e.target === boardEl){
+    selectedLeds.forEach(l => l._el && l._el.classList.remove('selected'));
+    selectedLeds = [];
+    updateSelectionUI();
+  }
+});
+
+function updateSelectionUI(){
+  if (!selectedLeds.length){
+    selInfoEl.textContent = 'Aucune touche sélectionnée.';
+    colorPicker.disabled = true;
+    vSlider.disabled = true;
+    return;
+  }
+  colorPicker.disabled = false;
+  vSlider.disabled = false;
+  const last = selectedLeds[selectedLeds.length - 1];
+  colorPicker.value = hsvToHex(last.h, last.s, 255);
+  vSlider.value = last.v;
+  vVal.textContent = last.v;
+  if (selectedLeds.length === 1){
+    selInfoEl.textContent = last.row !== null
+      ? ("Touche row " + last.row + " · col " + last.col)
+      : ("LED underglow #" + last.idx);
+    if (last.row !== null && last.keycode === null) fetchKeycodeLabel(last);
+  }else{
+    selInfoEl.textContent = selectedLeds.length + " touches sélectionnées.";
+  }
+}
+
+async function fetchKeycodeLabel(led){
+  try{
+    const kmsg = new Uint8Array([CMD_VIA_DYNAMIC_KEYMAP_GET_KEYCODE, 0, led.row, led.col]);
+    const kd = await hidSend(kmsg);
+    led.keycode = (kd[4] << 8) | kd[5];
+    if (selectedLeds.length === 1 && selectedLeds[0] === led){
+      selInfoEl.textContent = "Touche row " + led.row + " · col " + led.col + " · keycode " + led.keycode;
+    }
+  }catch(e){ /* juste un label — on ignore l'échec */ }
+}
+
+function applyHSToSelection(h, s){
+  selectedLeds.forEach(l => {
+    l.h = h; l.s = s;
+    l._el.style.background = hsvToHex(l.h, l.s, l.v || 40);
+  });
+  persistConfig();
+}
+function applyVToSelection(v){
+  selectedLeds.forEach(l => {
+    l.v = v;
+    l._el.style.background = hsvToHex(l.h, l.s, l.v || 40);
+  });
+  persistConfig();
+}
+function applyFullColorToSelection(hex){
+  if (!selectedLeds.length) return;
+  const { h, s, v: vRaw } = hexToHsv(hex);
+  const v = Math.min(vRaw, RGB_MAX_V);
+  selectedLeds.forEach(l => {
+    l.h = h; l.s = s; l.v = v;
+    l._el.style.background = hsvToHex(l.h, l.s, l.v || 40);
+  });
+  colorPicker.value = hex;
+  vSlider.value = v;
+  vVal.textContent = v;
+  persistConfig();
+}
+
+colorPicker.addEventListener('input', () => {
+  if (!selectedLeds.length) return;
+  const { h, s } = hexToHs(colorPicker.value);
+  applyHSToSelection(h, s);
+});
+colorPicker.addEventListener('change', () => {
+  if (!selectedLeds.length) return;
+  const last = selectedLeds[selectedLeds.length - 1];
+  addRecentColor(hsvToHex(last.h, last.s, last.v));
+});
+
+vSlider.addEventListener('input', () => {
+  if (!selectedLeds.length) return;
+  const v = parseInt(vSlider.value, 10);
+  vVal.textContent = v;
+  applyVToSelection(v);
+});
+vSlider.addEventListener('change', () => {
+  if (!selectedLeds.length) return;
+  const last = selectedLeds[selectedLeds.length - 1];
+  addRecentColor(hsvToHex(last.h, last.s, last.v));
+});
+
+// --- Preset swatches ---
+const PRESETS = [
+  '#ffffff', '#ff0000', '#ff8000', '#ffff00', '#80ff00', '#00ff00',
+  '#00ffff', '#0080ff', '#0000ff', '#8000ff', '#ff00ff', '#000000'
+];
+const presetsEl = document.getElementById('presets');
+PRESETS.forEach(hex => {
+  const sw = document.createElement('div');
+  sw.className = 'swatch';
+  sw.style.background = hex;
+  sw.addEventListener('click', () => {
+    if (!selectedLeds.length) return;
+    applyFullColorToSelection(hex);
+    addRecentColor(hex);
+  });
+  presetsEl.appendChild(sw);
+});
+
+document.getElementById('btnApplyAll').addEventListener('click', () => {
+  if (!selectedLeds.length) return;
+  const src = selectedLeds[selectedLeds.length - 1];
+  leds.forEach(l => { l.h = src.h; l.s = src.s; l.v = src.v; l._el.style.background = hsvToHex(l.h,l.s,l.v||40); });
+  persistConfig();
+});
+document.getElementById('btnApplyMatrix').addEventListener('click', () => {
+  if (!selectedLeds.length) return;
+  const src = selectedLeds[selectedLeds.length - 1];
+  leds.filter(l => l.row !== null).forEach(l => { l.h = src.h; l.s = src.s; l.v = src.v; l._el.style.background = hsvToHex(l.h,l.s,l.v||40); });
+  persistConfig();
+});
+
+// --- Apply to keyboard ---
+document.getElementById('btnApply').addEventListener('click', async () => {
+  try{
+    setStatus("Envoi des couleurs — layer " + LAYER_NAMES[currentLayer] + "…");
+    await applyLayerColors(currentLayer, leds);
+    layerCache[currentLayer] = currentLayerCfgByIdx();
+    setStatus("Couleurs appliquées au layer " + LAYER_NAMES[currentLayer] + " ✓ (RAM — clique \"Enregistrer définitivement\" pour survivre à un redémarrage)", 'ok');
+  }catch(e){
+    setStatus("Erreur à l'application : " + e.message, 'err');
+  }
+});
+
+document.getElementById('btnRefresh').addEventListener('click', async () => {
+  try{ setStatus("Rechargement…"); await loadLeds(); setStatus(leds.length + " LEDs rechargées.", 'ok'); }
+  catch(e){ setStatus("Erreur : " + e.message, 'err'); }
+});
+
+document.getElementById('btnConnect').addEventListener('click', connect);
+
+// --- Persistence (browser localStorage + JSON export/import) ---
+function currentCfg(){
+  const cfg = {};
+  leds.forEach(l => { cfg[l.key] = { h: l.h, s: l.s, v: l.v }; });
+  return cfg;
+}
+function applyCfgToLeds(cfg){
+  leds.forEach(l => {
+    if (cfg[l.key]){
+      l.h = cfg[l.key].h; l.s = cfg[l.key].s; l.v = cfg[l.key].v;
+      if (l._el) l._el.style.background = hsvToHex(l.h, l.s, l.v || 40);
+    }
+  });
+}
+function persistConfig(){
+  try{ localStorage.setItem(STORAGE_KEY + '_layer' + currentLayer, JSON.stringify(currentLayerCfgByIdx())); }catch(e){}
+}
+function loadSavedConfigForLayer(layer){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY + '_layer' + layer);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+
+// --- Configurations sauvegardées (ex: une par layer) ---
+const PRESETS_KEY = "vialrgb_saved_presets_v1";
+function loadPresets(){
+  try{ return JSON.parse(localStorage.getItem(PRESETS_KEY) || "{}"); }catch(e){ return {}; }
+}
+function savePresets(presets){
+  try{ localStorage.setItem(PRESETS_KEY, JSON.stringify(presets)); }catch(e){}
+}
+function renderPresetSelect(){
+  const sel = document.getElementById('presetSelect');
+  const presets = loadPresets();
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— choisir —</option>';
+  Object.keys(presets).sort().forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  if (presets[current]) sel.value = current;
+}
+renderPresetSelect();
+
+document.getElementById('btnSavePreset').addEventListener('click', () => {
+  const name = document.getElementById('presetName').value.trim();
+  if (!name){ setStatus("Donne un nom à la configuration avant d'enregistrer.", 'err'); return; }
+  if (!leds.length){ setStatus("Rien à sauvegarder — connecte le clavier d'abord.", 'err'); return; }
+  const presets = loadPresets();
+  presets[name] = currentCfg();
+  savePresets(presets);
+  renderPresetSelect();
+  document.getElementById('presetSelect').value = name;
+  setStatus("Configuration \"" + name + "\" enregistrée.", 'ok');
+});
+
+document.getElementById('btnLoadPreset').addEventListener('click', () => {
+  const name = document.getElementById('presetSelect').value;
+  if (!name) return;
+  const presets = loadPresets();
+  if (!presets[name]) return;
+  applyCfgToLeds(presets[name]);
+  persistConfig();
+  setStatus("Configuration \"" + name + "\" chargée. Clique 'Appliquer sur le clavier' pour l'envoyer.", 'ok');
+});
+
+document.getElementById('btnDeletePreset').addEventListener('click', () => {
+  const name = document.getElementById('presetSelect').value;
+  if (!name) return;
+  if (!confirm("Supprimer la configuration \"" + name + "\" ?")) return;
+  const presets = loadPresets();
+  delete presets[name];
+  savePresets(presets);
+  renderPresetSelect();
+  setStatus("Configuration \"" + name + "\" supprimée.");
+});
+
+document.getElementById('btnExportPresets').addEventListener('click', () => {
+  const presets = loadPresets();
+  if (!Object.keys(presets).length){ setStatus("Aucune configuration sauvegardée à exporter.", 'err'); return; }
+  const blob = new Blob([JSON.stringify(presets, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vialrgb-presets-backup.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  setStatus(Object.keys(presets).length + " configuration(s) exportée(s).", 'ok');
+});
+
+document.getElementById('btnImportPresets').addEventListener('click', () => document.getElementById('presetsFileInput').click());
+document.getElementById('presetsFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try{
+    const imported = JSON.parse(text);
+    const presets = { ...loadPresets(), ...imported };
+    savePresets(presets);
+    renderPresetSelect();
+    setStatus(Object.keys(imported).length + " configuration(s) importée(s).", 'ok');
+  }catch(err){
+    setStatus("Fichier JSON invalide.", 'err');
+  }
+  e.target.value = '';
+});
+
+// --- Recent colors ---
+const RECENTS_KEY = "vialrgb_recent_colors_v1";
+const RECENTS_MAX = 18;
+let recentColors = [];
+try{ recentColors = JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]"); }catch(e){ recentColors = []; }
+
+const recentsEl = document.getElementById('recents');
+function renderRecents(){
+  recentsEl.innerHTML = '';
+  recentColors.forEach(hex => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    sw.style.background = hex;
+    sw.title = hex;
+    sw.addEventListener('click', () => applyFullColorToSelection(hex));
+    recentsEl.appendChild(sw);
+  });
+}
+function addRecentColor(hex){
+  recentColors = [hex, ...recentColors.filter(c => c !== hex)].slice(0, RECENTS_MAX);
+  try{ localStorage.setItem(RECENTS_KEY, JSON.stringify(recentColors)); }catch(e){}
+  renderRecents();
+}
+renderRecents();
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(currentCfg(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vialrgb-config.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try{
+    const cfg = JSON.parse(text);
+    applyCfgToLeds(cfg);
+    persistConfig();
+    setStatus("Config importée. Clique 'Appliquer sur le clavier' pour l'envoyer.", 'ok');
+  }catch(err){
+    setStatus("Fichier JSON invalide.", 'err');
+  }
+});
+
+// --- Color helpers (QMK uses H,S,V on a 0-255 scale, not 0-360/0-100) ---
+function hsvToHex(h, s, v){
+  h = (h / 255) * 360;
+  s = s / 255;
+  v = v / 255;
+  const c = v * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = v - c;
+  let r=0,g=0,b=0;
+  if (h < 60){ r=c; g=x; b=0; }
+  else if (h < 120){ r=x; g=c; b=0; }
+  else if (h < 180){ r=0; g=c; b=x; }
+  else if (h < 240){ r=0; g=x; b=c; }
+  else if (h < 300){ r=x; g=0; b=c; }
+  else { r=c; g=0; b=x; }
+  const R = Math.round((r+m)*255), G = Math.round((g+m)*255), B = Math.round((b+m)*255);
+  return '#' + [R,G,B].map(n => n.toString(16).padStart(2,'0')).join('');
+}
+function hexToHs(hex){
+  const { h, s } = hexToHsv(hex);
+  return { h, s };
+}
+function hexToHsv(hex){
+  const r = parseInt(hex.slice(1,3),16)/255;
+  const g = parseInt(hex.slice(3,5),16)/255;
+  const b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0){
+    if (max === r) h = ((g-b)/d) % 6;
+    else if (max === g) h = (b-r)/d + 2;
+    else h = (r-g)/d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  const s = max === 0 ? 0 : d / max;
+  return { h: Math.round((h/360)*255), s: Math.round(s*255), v: Math.round(max*255) };
+}
+</script>
+</body>
+</html>
