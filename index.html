@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VialRGB — Éditeur par touche</title>
+<title>VialRGB — Per-Key Editor</title>
 <style>
   :root{
     --bg:#0d1117;
@@ -24,6 +24,13 @@
     font-family:"SF Mono","JetBrains Mono","Fira Code",Consolas,monospace;
     padding:24px;
   }
+  .top-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    max-width:1100px;
+  }
   h1{
     font-size:18px;
     letter-spacing:.02em;
@@ -34,6 +41,59 @@
     color:var(--muted);
     font-size:13px;
     margin-bottom:20px;
+  }
+  .lang-toggle{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:none;
+    font-size:12px;
+    color:var(--muted);
+    user-select:none;
+  }
+  .lang-toggle .switch{
+    position:relative;
+    display:inline-block;
+    width:44px;
+    height:24px;
+    flex:none;
+  }
+  .lang-toggle .switch input{
+    opacity:0;
+    width:0;
+    height:0;
+  }
+  .lang-toggle .slider{
+    position:absolute;
+    cursor:pointer;
+    inset:0;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:999px;
+    transition:.15s;
+  }
+  .lang-toggle .slider::before{
+    content:"";
+    position:absolute;
+    width:18px;
+    height:18px;
+    left:2px;
+    top:2px;
+    background:var(--muted);
+    border-radius:50%;
+    transition:.15s;
+  }
+  .lang-toggle input:checked + .slider::before{
+    transform:translateX(20px);
+    background:var(--accent);
+  }
+  .lang-toggle .lang-label{
+    min-width:16px;
+    text-align:center;
+  }
+  .lang-toggle .lang-label.active{
+    color:var(--text);
+    font-weight:600;
   }
   .layout{
     display:grid;
@@ -176,83 +236,84 @@
 </head>
 <body>
 
-<h1>VialRGB — Éditeur par touche</h1>
-<div class="sub">Contrôle direct des LEDs via WebHID · Sofle Choc Pro (KeeBart) et tout clavier VialRGB · Chrome / Edge uniquement</div>
+<div class="top-row">
+  <div>
+    <h1 data-i18n="h1">VialRGB — Per-Key Editor</h1>
+    <div class="sub" data-i18n="sub">Direct LED control via WebHID · Sofle Choc Pro (KeeBart) and any VialRGB keyboard · Chrome / Edge only</div>
+  </div>
+  <div class="lang-toggle">
+    <span id="langLabelEn" class="lang-label">EN</span>
+    <label class="switch">
+      <input type="checkbox" id="langToggle">
+      <span class="slider"></span>
+    </label>
+    <span id="langLabelFr" class="lang-label">FR</span>
+  </div>
+</div>
 
 <div class="layout">
 
   <div class="panel">
     <div class="toolbar">
-      <button id="btnConnect" class="primary">Connecter le clavier</button>
-      <button id="btnTestRed" disabled class="warn">Test rapide : toutes les LEDs = rouge</button>
-      <button id="btnDebug" disabled class="warn">Debug interne firmware</button>
-      <button id="btnRefresh" disabled>Recharger les LEDs</button>
+      <button id="btnConnect" class="primary" data-i18n="btnConnect">Connect keyboard</button>
+      <button id="btnTestRed" disabled class="warn" data-i18n="btnTestRed" style="display:none;">Quick test: all LEDs = red</button>
+      <button id="btnDebug" disabled class="warn" data-i18n="btnDebug" style="display:none;">Firmware internal debug</button>
+      <button id="btnForceSolid" disabled class="warn" data-i18n="btnForceSolid" style="display:none;">Diagnostic: force solid red (bypass Direct)</button>
+      <button id="btnRawBypass" disabled class="warn" data-i18n="btnRawBypass" style="display:none;">Diagnostic: raw driver bypass (no effect system)</button>
       <select id="layerSelect" disabled style="max-width:150px;">
-        <option value="0">Layer BASE</option>
-        <option value="1">Layer LOWER</option>
-        <option value="2">Layer RAISE</option>
+        <option value="0" data-i18n="layerBase">Layer 0</option>
+        <option value="1" data-i18n="layerLower">Layer 1</option>
+        <option value="2" data-i18n="layerRaise">Layer 2</option>
       </select>
-      <button id="btnApply" disabled>Appliquer sur le clavier</button>
-      <button id="btnSaveEeprom" disabled class="warn">Enregistrer définitivement sur le clavier</button>
-      <button id="btnExport">Exporter config (.json)</button>
-      <button id="btnImport">Importer config (.json)</button>
-      <input type="file" id="fileInput" accept="application/json" style="display:none">
+      <button id="btnApply" disabled data-i18n="btnApply">Apply to keyboard</button>
+      <button id="btnSaveEeprom" disabled class="warn" data-i18n="btnSaveEeprom">Save permanently to keyboard</button>
+      <button id="btnDefaultConfig" disabled data-i18n="btnDefaultConfig">Default configuration</button>
     </div>
-    <div id="status">Non connecté.</div>
+    <div id="status" data-i18n="statusDisconnected">Not connected.</div>
     <div id="board"></div>
-    <div class="hint" style="margin-top:10px;">
-      Clique une LED pour l'ajouter/retirer de la sélection (plusieurs à la fois possible), choisis une couleur à droite — elle s'applique à toute la sélection. Les touches carrées = LEDs de matrice (per-key). Les ronds = underglow. La config est sauvegardée automatiquement dans ce navigateur (<code>localStorage</code>) et peut être exportée en fichier pour la réutiliser ailleurs.
-    </div>
+    <div class="hint" style="margin-top:10px;" data-i18n="hint">Click an LED to add/remove it from the selection (multiple at once), then pick a color on the right — it applies to the whole selection. Square keys = matrix LEDs (per-key). Circles = underglow, and only appear if your keyboard's firmware reports underglow LEDs — if your board has none, you'll only ever see squares. The config is auto-saved in this browser (localStorage).</div>
   </div>
 
   <div class="panel">
-    <div class="side-title">Sélection</div>
-    <div id="selInfo" class="hint" style="margin-bottom:12px;">Aucune touche sélectionnée.</div>
+    <div class="side-title" data-i18n="selectionTitle">Selection</div>
+    <div id="selInfo" class="hint" style="margin-bottom:12px;" data-i18n="noKeySelected">No key selected.</div>
 
     <div class="field">
-      <label>Couleur</label>
+      <label><span data-i18n="colorLabel">Color</span></label>
       <input type="color" id="colorPicker" value="#39d0ff" disabled>
     </div>
 
     <div class="field">
-      <label>Luminosité (<span id="vVal">180</span>)</label>
-      <input type="range" id="vSlider" min="0" max="180" value="180" disabled>
+      <label><span data-i18n="brightnessLabel">Brightness</span> (<span id="vVal">170</span>)</label>
+      <input type="range" id="vSlider" min="0" max="170" value="170" disabled>
     </div>
 
-    <div class="side-title" style="margin-top:0;">Couleurs récentes</div>
+    <div class="side-title" style="margin-top:0;" data-i18n="recentColorsTitle">Recent colors</div>
     <div class="preset-grid" id="recents"></div>
 
-    <div class="side-title">Presets</div>
+    <div class="side-title" data-i18n="presetsTitle">Presets</div>
     <div class="preset-grid" id="presets"></div>
 
     <div class="row" style="margin-bottom:14px;">
-      <button id="btnApplyAll">Appliquer à toutes les LEDs</button>
-      <button id="btnApplyMatrix">Appliquer aux touches</button>
+      <button id="btnApplyAll" data-i18n="btnApplyAll">Apply to all LEDs</button>
     </div>
 
     <hr>
-    <div class="side-title">Configurations sauvegardées</div>
-    <div class="hint" style="margin-bottom:10px;">Sauvegarde tout le board affiché (ex: une par layer) pour le recharger et le retoucher plus tard sans repartir de zéro.</div>
+    <div class="side-title" data-i18n="savedConfigsTitle">Saved configurations</div>
+    <div class="hint" style="margin-bottom:10px;" data-i18n="savedConfigsHint">Saves the whole displayed board (e.g. one per layer) to reload and tweak later without starting over.</div>
     <div class="row" style="margin-bottom:8px;">
-      <input type="text" id="presetName" placeholder="Nom (ex: Layer BASE)">
-      <button id="btnSavePreset">Enregistrer</button>
+      <input type="text" id="presetName" data-i18n-placeholder="presetNamePlaceholder" placeholder="Name (e.g. Layer 0)">
+      <button id="btnSavePreset" data-i18n="btnSavePreset">Save</button>
     </div>
     <div class="row" style="margin-bottom:8px;">
-      <select id="presetSelect"><option value="">— choisir —</option></select>
-      <button id="btnLoadPreset">Charger</button>
-      <button id="btnDeletePreset">Supprimer</button>
+      <select id="presetSelect"></select>
+      <button id="btnLoadPreset" data-i18n="btnLoadPreset">Load</button>
+      <button id="btnDeletePreset" data-i18n="btnDeletePreset">Delete</button>
     </div>
-    <div class="hint" style="margin-bottom:8px;">
-      Ça reste dans ce navigateur (survit aux rechargements de page, mais pas à un "effacer les données de navigation"). Pour un vrai backup sur disque :
-    </div>
-    <div class="row" style="margin-bottom:14px;">
-      <button id="btnExportPresets">Exporter toutes (.json)</button>
-      <button id="btnImportPresets">Importer (.json)</button>
-      <input type="file" id="presetsFileInput" accept="application/json" style="display:none">
-    </div>
+    <div class="hint" style="margin-bottom:8px;" data-i18n="localStorageHint">This stays in this browser (survives page reloads, but not a "clear browsing data").</div>
 
     <hr>
-    <div class="side-title">Statut</div>
+    <div class="side-title" data-i18n="statusTitle">Status</div>
     <div class="hint" id="deviceInfo">—</div>
   </div>
 
@@ -260,7 +321,7 @@
 
 <script>
 const MSG_LEN = 32;
-const RGB_MAX_V = 180; // must match RGB_MATRIX_MAXIMUM_BRIGHTNESS in the firmware
+const RGB_MAX_V = 170; // must match RGB_MATRIX_MAXIMUM_BRIGHTNESS in the firmware
 const CMD_VIA_DYNAMIC_KEYMAP_GET_KEYCODE = 0x04;
 const CMD_VIA_LIGHTING_SET_VALUE = 0x07;
 const CMD_VIA_LIGHTING_GET_VALUE = 0x08;
@@ -274,8 +335,196 @@ const VIALRGB_DIRECT_FASTSET = 0x42;
 const VIALRGB_EFFECT_DIRECT = 1;
 const CMD_RGB_LAYER_GET = 0xF3;
 const CMD_RGB_LAYER_SET = 0xF4;
-const LAYER_NAMES = ['BASE', 'LOWER', 'RAISE'];
+const LAYER_NAMES = ['0', '1', '2'];
 const STORAGE_KEY = "vialrgb_editor_config_v1";
+const LANG_KEY = "vialrgb_lang";
+
+// Recovered from the user's last exported browser preset backup
+// (vialrgb-presets-backup.json), keyed by layer index then "row_col".
+const DEFAULT_CONFIG = {"0":{"4_5":{"h":0,"s":255,"v":255},"4_4":{"h":85,"s":255,"v":255},"4_3":{"h":85,"s":255,"v":255},"3_5":{"h":43,"s":255,"v":255},"2_5":{"h":43,"s":255,"v":255},"1_5":{"h":43,"s":255,"v":255},"0_5":{"h":0,"s":255,"v":255},"0_4":{"h":0,"s":255,"v":255},"1_4":{"h":43,"s":255,"v":255},"2_4":{"h":43,"s":255,"v":255},"3_4":{"h":43,"s":255,"v":255},"4_2":{"h":128,"s":255,"v":255},"4_1":{"h":128,"s":255,"v":255},"3_3":{"h":43,"s":255,"v":255},"2_3":{"h":43,"s":255,"v":255},"1_3":{"h":43,"s":255,"v":255},"0_3":{"h":0,"s":255,"v":255},"0_2":{"h":0,"s":255,"v":255},"1_2":{"h":43,"s":255,"v":255},"2_2":{"h":43,"s":255,"v":255},"3_2":{"h":43,"s":255,"v":255},"4_0":{"h":128,"s":255,"v":255},"3_1":{"h":43,"s":255,"v":255},"2_1":{"h":43,"s":255,"v":255},"1_1":{"h":43,"s":255,"v":255},"0_1":{"h":0,"s":255,"v":255},"0_0":{"h":128,"s":255,"v":255},"1_0":{"h":128,"s":255,"v":255},"2_0":{"h":128,"s":255,"v":255},"3_0":{"h":128,"s":255,"v":255},"9_5":{"h":0,"s":255,"v":255},"9_4":{"h":85,"s":255,"v":255},"9_3":{"h":85,"s":255,"v":255},"8_5":{"h":43,"s":255,"v":255},"7_5":{"h":43,"s":255,"v":255},"6_5":{"h":43,"s":255,"v":255},"5_5":{"h":0,"s":255,"v":255},"5_4":{"h":0,"s":255,"v":255},"6_4":{"h":43,"s":255,"v":255},"7_4":{"h":43,"s":255,"v":255},"8_4":{"h":85,"s":255,"v":255},"9_2":{"h":128,"s":255,"v":255},"9_1":{"h":128,"s":255,"v":255},"8_3":{"h":85,"s":255,"v":255},"7_3":{"h":43,"s":255,"v":255},"6_3":{"h":43,"s":255,"v":255},"5_3":{"h":0,"s":255,"v":255},"5_2":{"h":0,"s":255,"v":255},"6_2":{"h":43,"s":255,"v":255},"7_2":{"h":43,"s":255,"v":255},"8_2":{"h":85,"s":255,"v":255},"9_0":{"h":128,"s":255,"v":255},"8_1":{"h":85,"s":255,"v":255},"7_1":{"h":43,"s":255,"v":255},"6_1":{"h":43,"s":255,"v":255},"5_1":{"h":0,"s":255,"v":255},"5_0":{"h":128,"s":255,"v":255},"6_0":{"h":128,"s":255,"v":255},"7_0":{"h":128,"s":255,"v":255},"8_0":{"h":128,"s":255,"v":255}},"1":{"4_5":{"h":0,"s":0,"v":0},"4_4":{"h":0,"s":0,"v":0},"4_3":{"h":0,"s":0,"v":0},"3_5":{"h":0,"s":0,"v":0},"2_5":{"h":0,"s":0,"v":0},"1_5":{"h":0,"s":0,"v":0},"0_5":{"h":0,"s":0,"v":0},"0_4":{"h":0,"s":0,"v":0},"1_4":{"h":0,"s":0,"v":0},"2_4":{"h":0,"s":0,"v":0},"3_4":{"h":0,"s":0,"v":0},"4_2":{"h":0,"s":0,"v":0},"4_1":{"h":0,"s":0,"v":0},"3_3":{"h":0,"s":0,"v":0},"2_3":{"h":0,"s":0,"v":0},"1_3":{"h":0,"s":0,"v":0},"0_3":{"h":0,"s":0,"v":0},"0_2":{"h":0,"s":0,"v":0},"1_2":{"h":0,"s":0,"v":0},"2_2":{"h":0,"s":0,"v":0},"3_2":{"h":0,"s":0,"v":0},"4_0":{"h":0,"s":0,"v":0},"3_1":{"h":0,"s":0,"v":0},"2_1":{"h":0,"s":0,"v":0},"1_1":{"h":0,"s":0,"v":0},"0_1":{"h":0,"s":0,"v":0},"0_0":{"h":0,"s":255,"v":255},"1_0":{"h":0,"s":0,"v":0},"2_0":{"h":0,"s":0,"v":0},"3_0":{"h":0,"s":0,"v":0},"9_5":{"h":0,"s":255,"v":255},"9_4":{"h":0,"s":0,"v":0},"9_3":{"h":128,"s":255,"v":255},"8_5":{"h":0,"s":0,"v":0},"7_5":{"h":0,"s":0,"v":0},"6_5":{"h":0,"s":0,"v":0},"5_5":{"h":0,"s":0,"v":0},"5_4":{"h":0,"s":0,"v":0},"6_4":{"h":128,"s":255,"v":255},"7_4":{"h":128,"s":255,"v":255},"8_4":{"h":128,"s":255,"v":255},"9_2":{"h":128,"s":255,"v":255},"9_1":{"h":0,"s":0,"v":0},"8_3":{"h":128,"s":255,"v":255},"7_3":{"h":128,"s":255,"v":255},"6_3":{"h":128,"s":255,"v":255},"5_3":{"h":43,"s":255,"v":255},"5_2":{"h":43,"s":255,"v":255},"6_2":{"h":128,"s":255,"v":255},"7_2":{"h":128,"s":255,"v":255},"8_2":{"h":128,"s":255,"v":255},"9_0":{"h":85,"s":255,"v":255},"8_1":{"h":85,"s":255,"v":255},"7_1":{"h":43,"s":255,"v":255},"6_1":{"h":43,"s":255,"v":255},"5_1":{"h":43,"s":255,"v":255},"5_0":{"h":0,"s":0,"v":0},"6_0":{"h":0,"s":0,"v":0},"7_0":{"h":0,"s":0,"v":0},"8_0":{"h":0,"s":0,"v":0}},"2":{"4_5":{"h":0,"s":0,"v":0},"4_4":{"h":43,"s":255,"v":255},"4_3":{"h":0,"s":0,"v":0},"3_5":{"h":0,"s":0,"v":0},"2_5":{"h":0,"s":0,"v":0},"1_5":{"h":0,"s":0,"v":0},"0_5":{"h":0,"s":0,"v":0},"0_4":{"h":0,"s":0,"v":0},"1_4":{"h":0,"s":0,"v":0},"2_4":{"h":0,"s":0,"v":0},"3_4":{"h":0,"s":0,"v":0},"4_2":{"h":0,"s":0,"v":0},"4_1":{"h":0,"s":0,"v":0},"3_3":{"h":0,"s":0,"v":0},"2_3":{"h":0,"s":0,"v":0},"1_3":{"h":85,"s":255,"v":255},"0_3":{"h":0,"s":0,"v":0},"0_2":{"h":0,"s":0,"v":0},"1_2":{"h":0,"s":0,"v":0},"2_2":{"h":85,"s":255,"v":255},"3_2":{"h":0,"s":0,"v":0},"4_0":{"h":0,"s":0,"v":0},"3_1":{"h":0,"s":0,"v":0},"2_1":{"h":0,"s":0,"v":0},"1_1":{"h":0,"s":0,"v":0},"0_1":{"h":0,"s":0,"v":0},"0_0":{"h":0,"s":255,"v":255},"1_0":{"h":0,"s":0,"v":0},"2_0":{"h":0,"s":0,"v":0},"3_0":{"h":0,"s":0,"v":0},"9_5":{"h":0,"s":255,"v":255},"9_4":{"h":0,"s":0,"v":0},"9_3":{"h":128,"s":255,"v":255},"8_5":{"h":43,"s":255,"v":255},"7_5":{"h":43,"s":255,"v":255},"6_5":{"h":43,"s":255,"v":255},"5_5":{"h":43,"s":255,"v":255},"5_4":{"h":0,"s":0,"v":0},"6_4":{"h":0,"s":0,"v":0},"7_4":{"h":85,"s":255,"v":255},"8_4":{"h":0,"s":0,"v":0},"9_2":{"h":128,"s":255,"v":255},"9_1":{"h":0,"s":0,"v":0},"8_3":{"h":0,"s":0,"v":0},"7_3":{"h":85,"s":255,"v":255},"6_3":{"h":85,"s":255,"v":255},"5_3":{"h":0,"s":0,"v":0},"5_2":{"h":0,"s":255,"v":255},"6_2":{"h":128,"s":255,"v":255},"7_2":{"h":85,"s":255,"v":255},"8_2":{"h":0,"s":0,"v":0},"9_0":{"h":128,"s":255,"v":255},"8_1":{"h":0,"s":0,"v":0},"7_1":{"h":0,"s":0,"v":0},"6_1":{"h":128,"s":255,"v":255},"5_1":{"h":0,"s":255,"v":255},"5_0":{"h":0,"s":255,"v":255},"6_0":{"h":128,"s":255,"v":255},"7_0":{"h":0,"s":0,"v":0},"8_0":{"h":0,"s":0,"v":0}}};
+
+// --- i18n ---
+const I18N = {
+  en: {
+    title: "VialRGB — Per-Key Editor",
+    h1: "VialRGB — Per-Key Editor",
+    sub: "Direct LED control via WebHID · Sofle Choc Pro (KeeBart) and any VialRGB keyboard · Chrome / Edge only",
+    btnConnect: "Connect keyboard",
+    btnTestRed: "Quick test: all LEDs = red",
+    btnDebug: "Firmware internal debug",
+    btnForceSolid: "Diagnostic: force solid red (bypass Direct)",
+    btnRawBypass: "Diagnostic: raw driver bypass (no effect system)",
+    layerBase: "Layer 0",
+    layerLower: "Layer 1",
+    layerRaise: "Layer 2",
+    btnApply: "Apply to keyboard",
+    btnSaveEeprom: "Save permanently to keyboard",
+    btnDefaultConfig: "Default configuration",
+    statusDisconnected: "Not connected.",
+    hint: "Click an LED to add/remove it from the selection (multiple at once), then pick a color on the right — it applies to the whole selection. Square keys = matrix LEDs (per-key). Circles = underglow, and only appear if your keyboard's firmware reports underglow LEDs — if your board has none, you'll only ever see squares. The config is auto-saved in this browser (localStorage).",
+    selectionTitle: "Selection",
+    noKeySelected: "No key selected.",
+    colorLabel: "Color",
+    brightnessLabel: "Brightness",
+    recentColorsTitle: "Recent colors",
+    presetsTitle: "Presets",
+    btnApplyAll: "Apply to all LEDs",
+    savedConfigsTitle: "Saved configurations",
+    savedConfigsHint: "Saves the whole displayed board (e.g. one per layer) to reload and tweak later without starting over.",
+    presetNamePlaceholder: "Name (e.g. Layer 0)",
+    btnSavePreset: "Save",
+    chooseOption: "— choose —",
+    btnLoadPreset: "Load",
+    btnDeletePreset: "Delete",
+    localStorageHint: "This stays in this browser (survives page reloads, but not a \"clear browsing data\").",
+    statusTitle: "Status",
+    errNoResponse: "No response from keyboard ({0})",
+    errWebHidUnavailable: "WebHID unavailable — use Chrome or Edge.",
+    errNoDeviceSelected: "No keyboard selected.",
+    connectedChecking: "Connected to {0}, checking protocol…",
+    errFirmwareOld: "Vial firmware too old (protocol < 4)",
+    errNoVialRgb: "This keyboard doesn't expose VialRGB (firmware without VIALRGB_ENABLE?)",
+    deviceInfoText: "{0} · Vial protocol v{1}",
+    readyLoaded: "Ready — {0} LEDs loaded.",
+    errGeneric: "Error: {0}",
+    eepromSaving: "Saving to EEPROM…",
+    eepromSaved: "Colors permanently saved to keyboard.",
+    eepromFailed: "Save failed.",
+    defaultConfigApplying: "Applying default configuration to all 3 layers…",
+    defaultConfigApplied: "Default configuration applied to all 3 layers. Click \"Save permanently\" to keep it after a reboot.",
+    testReadingCount: "Test: reading LED count…",
+    testSending: "Sending: {0} LEDs = red…",
+    testSentOk: "Sent for {0} LEDs. Mode read back from keyboard: {1} (Direct — OK)",
+    testSentErr: "Sent for {0} LEDs. Mode read back from keyboard: {1} (NOT Direct — mode didn't take!)",
+    errTest: "Test error: {0}",
+    debugReading: "Reading firmware internal state…",
+    debugReport: "enabled={0} (raw={1}) · mode={2} (expected direct={3}) · suspended={4} · master={5} · active_layer={6} · probe_led={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
+    forceSolidReading: "Forcing plain Solid Color effect (bypasses VialRGB/Direct entirely)…",
+    forceSolidResult: "Mode is now {0} (enabled={1}). Look at the keyboard: does it turn solid red?",
+    debugPeerReport: "OTHER HALF: enabled={0} (raw={1}) · mode={2} · suspended={3} · master={4} · active_layer={5} · direct(h,s,v)={6},{7},{8} · loop_ticks={9}",
+    debugPeerFailed: "OTHER HALF: query failed (no response, or not a split setup)",
+    rawBypassReading: "Bypassing the whole effect system, writing straight to the driver…",
+    rawBypassResult: "Done, pushed to other half too (ok={0}). Look at the keyboard: does the WHOLE thing turn solid red?",
+    errDebug: "Debug error: {0}",
+    loadingLed: "Loading LED {0}/{1}…",
+    readingLayerColors: "Reading colors — layer {0}…",
+    layerSwitched: "Layer {0} — {1} LEDs.",
+    selectedKeyMatrix: "Key row {0} · col {1}",
+    selectedKeyUnderglow: "Underglow LED #{0}",
+    selectedKeysCount: "{0} keys selected.",
+    selectedKeyKeycode: "Key row {0} · col {1} · keycode {2}",
+    applyingColors: "Sending colors — layer {0}…",
+    appliedColors: "Colors applied to layer {0} ✓ (RAM — click \"Save permanently\" to survive a reboot)",
+    errApply: "Error applying: {0}",
+    presetNameRequired: "Give the configuration a name before saving.",
+    presetNothingToSave: "Nothing to save — connect the keyboard first.",
+    presetSaved: "Configuration \"{0}\" saved.",
+    presetLoaded: "Configuration \"{0}\" loaded. Click 'Apply to keyboard' to send it.",
+    presetDeleteConfirm: "Delete configuration \"{0}\"?",
+    presetDeleted: "Configuration \"{0}\" deleted."
+  },
+  fr: {
+    title: "VialRGB — Éditeur par touche",
+    h1: "VialRGB — Éditeur par touche",
+    sub: "Contrôle direct des LEDs via WebHID · Sofle Choc Pro (KeeBart) et tout clavier VialRGB · Chrome / Edge uniquement",
+    btnConnect: "Connecter le clavier",
+    btnTestRed: "Test rapide : toutes les LEDs = rouge",
+    btnDebug: "Debug interne firmware",
+    btnForceSolid: "Diagnostic : forcer rouge uni (contourne Direct)",
+    btnRawBypass: "Diagnostic : contournement driver brut (sans système d'effets)",
+    layerBase: "Layer 0",
+    layerLower: "Layer 1",
+    layerRaise: "Layer 2",
+    btnApply: "Appliquer sur le clavier",
+    btnSaveEeprom: "Enregistrer définitivement sur le clavier",
+    btnDefaultConfig: "Configuration par défaut",
+    statusDisconnected: "Non connecté.",
+    hint: "Clique une LED pour l'ajouter/retirer de la sélection (plusieurs à la fois possible), choisis une couleur à droite — elle s'applique à toute la sélection. Les touches carrées = LEDs de matrice (per-key). Les ronds = underglow, et n'apparaissent que si le firmware de ton clavier remonte des LEDs underglow — si ton clavier n'en a pas, tu ne verras jamais que des carrés. La config est sauvegardée automatiquement dans ce navigateur (localStorage).",
+    selectionTitle: "Sélection",
+    noKeySelected: "Aucune touche sélectionnée.",
+    colorLabel: "Couleur",
+    brightnessLabel: "Luminosité",
+    recentColorsTitle: "Couleurs récentes",
+    presetsTitle: "Presets",
+    btnApplyAll: "Appliquer à toutes les LEDs",
+    savedConfigsTitle: "Configurations sauvegardées",
+    savedConfigsHint: "Sauvegarde tout le board affiché (ex: une par layer) pour le recharger et le retoucher plus tard sans repartir de zéro.",
+    presetNamePlaceholder: "Nom (ex: Layer 0)",
+    btnSavePreset: "Enregistrer",
+    chooseOption: "— choisir —",
+    btnLoadPreset: "Charger",
+    btnDeletePreset: "Supprimer",
+    localStorageHint: "Ça reste dans ce navigateur (survit aux rechargements de page, mais pas à un \"effacer les données de navigation\").",
+    statusTitle: "Statut",
+    errNoResponse: "Pas de réponse du clavier ({0})",
+    errWebHidUnavailable: "WebHID indisponible — utilise Chrome ou Edge.",
+    errNoDeviceSelected: "Aucun clavier sélectionné.",
+    connectedChecking: "Connecté à {0}, vérification du protocole…",
+    errFirmwareOld: "Firmware Vial trop ancien (protocole < 4)",
+    errNoVialRgb: "Ce clavier n'expose pas VialRGB (firmware sans VIALRGB_ENABLE ?)",
+    deviceInfoText: "{0} · protocole Vial v{1}",
+    readyLoaded: "Prêt — {0} LEDs chargées.",
+    errGeneric: "Erreur : {0}",
+    eepromSaving: "Enregistrement en EEPROM…",
+    eepromSaved: "Couleurs enregistrées définitivement sur le clavier.",
+    eepromFailed: "Échec de l'enregistrement.",
+    defaultConfigApplying: "Application de la configuration par défaut sur les 3 layers…",
+    defaultConfigApplied: "Configuration par défaut appliquée aux 3 layers. Clique \"Enregistrer définitivement\" pour la garder après un redémarrage.",
+    testReadingCount: "Test : lecture du nombre de LEDs…",
+    testSending: "Envoi : {0} LEDs = rouge…",
+    testSentOk: "Envoyé pour {0} LEDs. Mode relu sur le clavier : {1} (Direct — OK)",
+    testSentErr: "Envoyé pour {0} LEDs. Mode relu sur le clavier : {1} (PAS Direct — le mode n'a pas pris !)",
+    errTest: "Erreur au test : {0}",
+    debugReading: "Lecture de l'état interne du firmware…",
+    debugReport: "enabled={0} (brut={1}) · mode={2} (direct attendu={3}) · suspendu={4} · master={5} · layer_actif={6} · led_testée={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
+    forceSolidReading: "Forçage d'un effet Solid Color standard (contourne totalement VialRGB/Direct)…",
+    forceSolidResult: "Le mode est maintenant {0} (enabled={1}). Regarde le clavier : est-ce qu'il passe en rouge uni ?",
+    debugPeerReport: "AUTRE MOITIÉ : enabled={0} (brut={1}) · mode={2} · suspendu={3} · master={4} · layer_actif={5} · direct(h,s,v)={6},{7},{8} · ticks_boucle={9}",
+    debugPeerFailed: "AUTRE MOITIÉ : requête échouée (pas de réponse, ou pas de split)",
+    rawBypassReading: "Contournement total du système d'effets, écriture directe dans le driver…",
+    rawBypassResult: "Fait, transmis à l'autre moitié aussi (ok={0}). Regarde le clavier : est-ce que TOUT passe en rouge uni ?",
+    errDebug: "Erreur au debug : {0}",
+    loadingLed: "Chargement LED {0}/{1}…",
+    readingLayerColors: "Lecture des couleurs — layer {0}…",
+    layerSwitched: "Layer {0} — {1} LEDs.",
+    selectedKeyMatrix: "Touche row {0} · col {1}",
+    selectedKeyUnderglow: "LED underglow #{0}",
+    selectedKeysCount: "{0} touches sélectionnées.",
+    selectedKeyKeycode: "Touche row {0} · col {1} · keycode {2}",
+    applyingColors: "Envoi des couleurs — layer {0}…",
+    appliedColors: "Couleurs appliquées au layer {0} ✓ (RAM — clique \"Enregistrer définitivement\" pour survivre à un redémarrage)",
+    errApply: "Erreur à l'application : {0}",
+    presetNameRequired: "Donne un nom à la configuration avant d'enregistrer.",
+    presetNothingToSave: "Rien à sauvegarder — connecte le clavier d'abord.",
+    presetSaved: "Configuration \"{0}\" enregistrée.",
+    presetLoaded: "Configuration \"{0}\" chargée. Clique 'Appliquer sur le clavier' pour l'envoyer.",
+    presetDeleteConfirm: "Supprimer la configuration \"{0}\" ?",
+    presetDeleted: "Configuration \"{0}\" supprimée."
+  }
+};
+let currentLang = 'en';
+try{ currentLang = localStorage.getItem(LANG_KEY) || 'en'; }catch(e){}
+
+function t(key, ...args){
+  let str = (I18N[currentLang] && I18N[currentLang][key]) || key;
+  args.forEach((a, i) => { str = str.replace('{' + i + '}', a); });
+  return str;
+}
+
+// ponytail: switching language only re-renders static labels + the "nothing
+// selected"/"choose a preset" defaults — a status/selection message already
+// shown on screen keeps its current wording until the next update, instead
+// of rebuilding a full reactive re-render for a local single-user tool.
+function applyI18n(){
+  document.title = t('title');
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.getElementById('langToggle').checked = currentLang === 'fr';
+  document.getElementById('langLabelEn').classList.toggle('active', currentLang === 'en');
+  document.getElementById('langLabelFr').classList.toggle('active', currentLang === 'fr');
+  renderPresetSelect();
+}
 
 let device = null;
 let pending = null;
@@ -293,6 +542,7 @@ const vSlider = document.getElementById('vSlider');
 const vVal = document.getElementById('vVal');
 
 function setStatus(msg, kind){
+  statusEl.removeAttribute('data-i18n');
   statusEl.textContent = msg;
   statusEl.className = kind || '';
 }
@@ -327,7 +577,7 @@ async function hidSend(bytes, retries = 1){
     }
     console.log('[recv] timeout, retry', i+1, '/', retries);
   }
-  throw new Error("Pas de réponse du clavier (" + (lastErr ? lastErr.message : 'timeout') + ")");
+  throw new Error(t('errNoResponse', lastErr ? lastErr.message : 'timeout'));
 }
 
 function onInputReport(e){
@@ -341,7 +591,7 @@ function onInputReport(e){
 
 async function connect(){
   if (!('hid' in navigator)){
-    setStatus("WebHID indisponible — utilise Chrome ou Edge.", 'err');
+    setStatus(t('errWebHidUnavailable'), 'err');
     return;
   }
   try{
@@ -349,35 +599,37 @@ async function connect(){
       filters: [{ usagePage: 0xFF60, usage: 0x61 }]
     });
     if (!devices.length){
-      setStatus("Aucun clavier sélectionné.", 'err');
+      setStatus(t('errNoDeviceSelected'), 'err');
       return;
     }
     device = devices[0];
     if (!device.opened) await device.open();
     device.addEventListener('inputreport', onInputReport);
 
-    setStatus("Connecté à " + device.productName + ", vérification du protocole…");
+    setStatus(t('connectedChecking', device.productName));
 
     // Check VialRGB support (0xFE 0x00 = vial info command)
     const info = await hidSend(new Uint8Array([0xFE, 0x00]), 5);
     const view = new DataView(info.buffer, info.byteOffset, info.byteLength);
     const vialProtocol = view.getUint32(0, true);
     const flags = view.getUint8(12);
-    if (vialProtocol < 4) throw new Error("Firmware Vial trop ancien (protocole < 4)");
-    if ((flags & 1) !== 1) throw new Error("Ce clavier n'expose pas VialRGB (firmware sans VIALRGB_ENABLE ?)");
+    if (vialProtocol < 4) throw new Error(t('errFirmwareOld'));
+    if ((flags & 1) !== 1) throw new Error(t('errNoVialRgb'));
 
-    deviceInfoEl.textContent = device.productName + " · protocole Vial v" + vialProtocol;
+    deviceInfoEl.textContent = t('deviceInfoText', device.productName, vialProtocol);
     document.getElementById('btnTestRed').disabled = false;
     document.getElementById('btnDebug').disabled = false;
+    document.getElementById('btnForceSolid').disabled = false;
+    document.getElementById('btnRawBypass').disabled = false;
 
     await loadLeds();
-    setStatus("Prêt — " + leds.length + " LEDs chargées.", 'ok');
-    document.getElementById('btnRefresh').disabled = false;
+    setStatus(t('readyLoaded', leds.length), 'ok');
     document.getElementById('btnApply').disabled = false;
     document.getElementById('btnSaveEeprom').disabled = false;
+    document.getElementById('btnDefaultConfig').disabled = false;
     document.getElementById('layerSelect').disabled = false;
   }catch(e){
-    setStatus("Erreur : " + e.message, 'err');
+    setStatus(t('errGeneric', e.message), 'err');
   }
 }
 
@@ -405,37 +657,77 @@ async function applyColors(entries){
 
 document.getElementById('btnSaveEeprom').addEventListener('click', async () => {
   try{
-    setStatus("Enregistrement en EEPROM…");
+    setStatus(t('eepromSaving'));
     const resp = await hidSend(new Uint8Array([0xF1]));
-    setStatus(resp[1] === 1 ? "Couleurs enregistrées définitivement sur le clavier." : "Échec de l'enregistrement.", resp[1] === 1 ? 'ok' : 'err');
+    setStatus(resp[1] === 1 ? t('eepromSaved') : t('eepromFailed'), resp[1] === 1 ? 'ok' : 'err');
   }catch(e){
-    setStatus("Erreur : " + e.message, 'err');
+    setStatus(t('errGeneric', e.message), 'err');
+  }
+});
+
+document.getElementById('btnDefaultConfig').addEventListener('click', async () => {
+  try{
+    setStatus(t('defaultConfigApplying'));
+    for (let layer = 0; layer < 3; layer++){
+      const cfg = DEFAULT_CONFIG[layer];
+      const entries = leds.map(l => {
+        const c = cfg[l.key];
+        return c ? { idx: l.idx, h: c.h, s: c.s, v: Math.min(c.v, RGB_MAX_V) } : { idx: l.idx, h: 0, s: 0, v: 0 };
+      });
+      await applyLayerColors(layer, entries);
+      layerCache[layer] = {};
+      entries.forEach(e => { layerCache[layer][e.idx] = { h: e.h, s: e.s, v: e.v }; });
+    }
+    applyLayerCacheToLeds(currentLayer);
+    renderBoard();
+    setStatus(t('defaultConfigApplied'), 'ok');
+  }catch(e){
+    setStatus(t('errGeneric', e.message), 'err');
   }
 });
 
 document.getElementById('btnDebug').addEventListener('click', async () => {
   try{
-    setStatus("Lecture de l'état interne du firmware…");
-    const d = await hidSend(new Uint8Array([0xF0]));
-    const report =
-      "enabled=" + d[1] +
-      " · mode_actif=" + d[2] +
-      " · id_direct_attendu=" + d[3] +
-      " · nb_effets_max=" + d[4] +
-      " · led0(h,s,v)=" + d[5] + "," + d[6] + "," + d[7] +
-      " · led30(h,s,v)=" + d[8] + "," + d[9] + "," + d[10];
-    setStatus(report, d[2] === d[3] ? 'ok' : 'err');
+    setStatus(t('debugReading'));
+    const probeIdx = selectedLeds.length ? selectedLeds[0].idx : 0;
+    const d = await hidSend(new Uint8Array([0xF0, probeIdx & 0xFF]));
+    const local = t('debugReport', d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15], d[16], d[17]);
+    const peerTicks = (d[28] | (d[29] << 8) | (d[30] << 16) | (d[31] << 24)) >>> 0;
+    const peer = d[18] === 1
+      ? t('debugPeerReport', d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], peerTicks)
+      : t('debugPeerFailed');
+    setStatus(local + ' || ' + peer, d[3] === d[4] ? 'ok' : 'err');
   }catch(e){
-    setStatus("Erreur au debug : " + e.message, 'err');
+    setStatus(t('errDebug', e.message), 'err');
+  }
+});
+
+document.getElementById('btnForceSolid').addEventListener('click', async () => {
+  try{
+    setStatus(t('forceSolidReading'));
+    const d = await hidSend(new Uint8Array([0xF2]));
+    setStatus(t('forceSolidResult', d[1], d[2]), 'ok');
+  }catch(e){
+    setStatus(t('errDebug', e.message), 'err');
+  }
+});
+
+document.getElementById('btnRawBypass').addEventListener('click', async () => {
+  try{
+    setStatus(t('rawBypassReading'));
+    const d = await hidSend(new Uint8Array([0xF5]));
+    setStatus(t('rawBypassResult', d[2]), 'ok');
+  }catch(e){
+    setStatus(t('errDebug', e.message), 'err');
   }
 });
 
 document.getElementById('btnTestRed').addEventListener('click', async () => {
   try{
-    setStatus("Test : lecture du nombre de LEDs…");
+    setStatus(t('testReadingCount'));
     const countResp = await hidSend(new Uint8Array([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_NUMBER_LEDS]));
     const numLeds = countResp[2] | (countResp[3] << 8);
-    setStatus("Envoi : " + numLeds + " LEDs = rouge…");
+    setStatus(t('testSending', numLeds));
     const all = Array.from({ length: numLeds }, (_, i) => ({ idx: i, h: 0, s: 255, v: 255 }));
     await applyColors(all);
 
@@ -445,10 +737,9 @@ document.getElementById('btnTestRed').addEventListener('click', async () => {
     const modeResp = await hidSend(new Uint8Array([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_MODE]));
     const activeMode = modeResp[2] | (modeResp[3] << 8);
     const modeOk = activeMode === VIALRGB_EFFECT_DIRECT;
-    setStatus("Envoyé pour " + numLeds + " LEDs. Mode relu sur le clavier : " + activeMode +
-      (modeOk ? " (Direct — OK)" : " (PAS Direct — le mode n'a pas pris !)"), modeOk ? 'ok' : 'err');
+    setStatus(modeOk ? t('testSentOk', numLeds, activeMode) : t('testSentErr', numLeds, activeMode), modeOk ? 'ok' : 'err');
   }catch(e){
-    setStatus("Erreur au test : " + e.message, 'err');
+    setStatus(t('errTest', e.message), 'err');
   }
 });
 
@@ -463,7 +754,7 @@ async function loadLeds(){
   selectedLeds = [];
   updateSelectionUI();
   for (let idx = 0; idx < numLeds; idx++){
-    setStatus("Chargement LED " + (idx + 1) + "/" + numLeds + "…");
+    setStatus(t('loadingLed', idx + 1, numLeds));
     const msg = new Uint8Array([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_LED_INFO, idx & 0xFF, (idx >> 8) & 0xFF]);
     const d = await hidSend(msg);
     const x = d[2], y = d[3], ledFlags = d[4], rowRaw = d[5], colRaw = d[6];
@@ -479,7 +770,7 @@ async function loadLeds(){
   // firmware sans RGB_LAYER_GET_CMD/RGB_LAYER_SET_CMD).
   layerCache = [{}, {}, {}];
   for (let layer = 0; layer < 3; layer++){
-    setStatus("Lecture des couleurs — layer " + LAYER_NAMES[layer] + "…");
+    setStatus(t('readingLayerColors', LAYER_NAMES[layer]));
     const fromHw = await fetchLayerColors(layer);
     layerCache[layer] = fromHw || loadSavedConfigForLayer(layer);
   }
@@ -544,7 +835,7 @@ document.getElementById('layerSelect').addEventListener('change', (e) => {
   renderBoard();
   selectedLeds = [];
   updateSelectionUI();
-  setStatus("Layer " + LAYER_NAMES[currentLayer] + " — " + leds.length + " LEDs.", 'ok');
+  setStatus(t('layerSwitched', LAYER_NAMES[currentLayer], leds.length), 'ok');
 });
 
 function renderBoard(){
@@ -614,11 +905,13 @@ boardEl.addEventListener('mousedown', (e) => {
 
 function updateSelectionUI(){
   if (!selectedLeds.length){
-    selInfoEl.textContent = 'Aucune touche sélectionnée.';
+    selInfoEl.setAttribute('data-i18n', 'noKeySelected');
+    selInfoEl.textContent = t('noKeySelected');
     colorPicker.disabled = true;
     vSlider.disabled = true;
     return;
   }
+  selInfoEl.removeAttribute('data-i18n');
   colorPicker.disabled = false;
   vSlider.disabled = false;
   const last = selectedLeds[selectedLeds.length - 1];
@@ -627,11 +920,11 @@ function updateSelectionUI(){
   vVal.textContent = last.v;
   if (selectedLeds.length === 1){
     selInfoEl.textContent = last.row !== null
-      ? ("Touche row " + last.row + " · col " + last.col)
-      : ("LED underglow #" + last.idx);
+      ? t('selectedKeyMatrix', last.row, last.col)
+      : t('selectedKeyUnderglow', last.idx);
     if (last.row !== null && last.keycode === null) fetchKeycodeLabel(last);
   }else{
-    selInfoEl.textContent = selectedLeds.length + " touches sélectionnées.";
+    selInfoEl.textContent = t('selectedKeysCount', selectedLeds.length);
   }
 }
 
@@ -641,7 +934,7 @@ async function fetchKeycodeLabel(led){
     const kd = await hidSend(kmsg);
     led.keycode = (kd[4] << 8) | kd[5];
     if (selectedLeds.length === 1 && selectedLeds[0] === led){
-      selInfoEl.textContent = "Touche row " + led.row + " · col " + led.col + " · keycode " + led.keycode;
+      selInfoEl.textContent = t('selectedKeyKeycode', led.row, led.col, led.keycode);
     }
   }catch(e){ /* juste un label — on ignore l'échec */ }
 }
@@ -721,33 +1014,28 @@ document.getElementById('btnApplyAll').addEventListener('click', () => {
   leds.forEach(l => { l.h = src.h; l.s = src.s; l.v = src.v; l._el.style.background = hsvToHex(l.h,l.s,l.v||40); });
   persistConfig();
 });
-document.getElementById('btnApplyMatrix').addEventListener('click', () => {
-  if (!selectedLeds.length) return;
-  const src = selectedLeds[selectedLeds.length - 1];
-  leds.filter(l => l.row !== null).forEach(l => { l.h = src.h; l.s = src.s; l.v = src.v; l._el.style.background = hsvToHex(l.h,l.s,l.v||40); });
-  persistConfig();
-});
 
 // --- Apply to keyboard ---
 document.getElementById('btnApply').addEventListener('click', async () => {
   try{
-    setStatus("Envoi des couleurs — layer " + LAYER_NAMES[currentLayer] + "…");
+    setStatus(t('applyingColors', LAYER_NAMES[currentLayer]));
     await applyLayerColors(currentLayer, leds);
     layerCache[currentLayer] = currentLayerCfgByIdx();
-    setStatus("Couleurs appliquées au layer " + LAYER_NAMES[currentLayer] + " ✓ (RAM — clique \"Enregistrer définitivement\" pour survivre à un redémarrage)", 'ok');
+    setStatus(t('appliedColors', LAYER_NAMES[currentLayer]), 'ok');
   }catch(e){
-    setStatus("Erreur à l'application : " + e.message, 'err');
+    setStatus(t('errApply', e.message), 'err');
   }
-});
-
-document.getElementById('btnRefresh').addEventListener('click', async () => {
-  try{ setStatus("Rechargement…"); await loadLeds(); setStatus(leds.length + " LEDs rechargées.", 'ok'); }
-  catch(e){ setStatus("Erreur : " + e.message, 'err'); }
 });
 
 document.getElementById('btnConnect').addEventListener('click', connect);
 
-// --- Persistence (browser localStorage + JSON export/import) ---
+document.getElementById('langToggle').addEventListener('change', (e) => {
+  currentLang = e.target.checked ? 'fr' : 'en';
+  try{ localStorage.setItem(LANG_KEY, currentLang); }catch(e){}
+  applyI18n();
+});
+
+// --- Persistence (browser localStorage) ---
 function currentCfg(){
   const cfg = {};
   leds.forEach(l => { cfg[l.key] = { h: l.h, s: l.s, v: l.v }; });
@@ -783,7 +1071,11 @@ function renderPresetSelect(){
   const sel = document.getElementById('presetSelect');
   const presets = loadPresets();
   const current = sel.value;
-  sel.innerHTML = '<option value="">— choisir —</option>';
+  sel.innerHTML = '';
+  const emptyOpt = document.createElement('option');
+  emptyOpt.value = '';
+  emptyOpt.textContent = t('chooseOption');
+  sel.appendChild(emptyOpt);
   Object.keys(presets).sort().forEach(name => {
     const opt = document.createElement('option');
     opt.value = name; opt.textContent = name;
@@ -791,18 +1083,17 @@ function renderPresetSelect(){
   });
   if (presets[current]) sel.value = current;
 }
-renderPresetSelect();
 
 document.getElementById('btnSavePreset').addEventListener('click', () => {
   const name = document.getElementById('presetName').value.trim();
-  if (!name){ setStatus("Donne un nom à la configuration avant d'enregistrer.", 'err'); return; }
-  if (!leds.length){ setStatus("Rien à sauvegarder — connecte le clavier d'abord.", 'err'); return; }
+  if (!name){ setStatus(t('presetNameRequired'), 'err'); return; }
+  if (!leds.length){ setStatus(t('presetNothingToSave'), 'err'); return; }
   const presets = loadPresets();
   presets[name] = currentCfg();
   savePresets(presets);
   renderPresetSelect();
   document.getElementById('presetSelect').value = name;
-  setStatus("Configuration \"" + name + "\" enregistrée.", 'ok');
+  setStatus(t('presetSaved', name), 'ok');
 });
 
 document.getElementById('btnLoadPreset').addEventListener('click', () => {
@@ -812,48 +1103,18 @@ document.getElementById('btnLoadPreset').addEventListener('click', () => {
   if (!presets[name]) return;
   applyCfgToLeds(presets[name]);
   persistConfig();
-  setStatus("Configuration \"" + name + "\" chargée. Clique 'Appliquer sur le clavier' pour l'envoyer.", 'ok');
+  setStatus(t('presetLoaded', name), 'ok');
 });
 
 document.getElementById('btnDeletePreset').addEventListener('click', () => {
   const name = document.getElementById('presetSelect').value;
   if (!name) return;
-  if (!confirm("Supprimer la configuration \"" + name + "\" ?")) return;
+  if (!confirm(t('presetDeleteConfirm', name))) return;
   const presets = loadPresets();
   delete presets[name];
   savePresets(presets);
   renderPresetSelect();
-  setStatus("Configuration \"" + name + "\" supprimée.");
-});
-
-document.getElementById('btnExportPresets').addEventListener('click', () => {
-  const presets = loadPresets();
-  if (!Object.keys(presets).length){ setStatus("Aucune configuration sauvegardée à exporter.", 'err'); return; }
-  const blob = new Blob([JSON.stringify(presets, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'vialrgb-presets-backup.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  setStatus(Object.keys(presets).length + " configuration(s) exportée(s).", 'ok');
-});
-
-document.getElementById('btnImportPresets').addEventListener('click', () => document.getElementById('presetsFileInput').click());
-document.getElementById('presetsFileInput').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  try{
-    const imported = JSON.parse(text);
-    const presets = { ...loadPresets(), ...imported };
-    savePresets(presets);
-    renderPresetSelect();
-    setStatus(Object.keys(imported).length + " configuration(s) importée(s).", 'ok');
-  }catch(err){
-    setStatus("Fichier JSON invalide.", 'err');
-  }
-  e.target.value = '';
+  setStatus(t('presetDeleted', name));
 });
 
 // --- Recent colors ---
@@ -880,31 +1141,6 @@ function addRecentColor(hex){
   renderRecents();
 }
 renderRecents();
-
-document.getElementById('btnExport').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(currentCfg(), null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'vialrgb-config.json';
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
-document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileInput').click());
-document.getElementById('fileInput').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  try{
-    const cfg = JSON.parse(text);
-    applyCfgToLeds(cfg);
-    persistConfig();
-    setStatus("Config importée. Clique 'Appliquer sur le clavier' pour l'envoyer.", 'ok');
-  }catch(err){
-    setStatus("Fichier JSON invalide.", 'err');
-  }
-});
 
 // --- Color helpers (QMK uses H,S,V on a 0-255 scale, not 0-360/0-100) ---
 function hsvToHex(h, s, v){
@@ -945,6 +1181,8 @@ function hexToHsv(hex){
   const s = max === 0 ? 0 : d / max;
   return { h: Math.round((h/360)*255), s: Math.round(s*255), v: Math.round(max*255) };
 }
+
+applyI18n();
 </script>
 </body>
 </html>
