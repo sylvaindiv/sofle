@@ -336,7 +336,7 @@ const I18N = {
     debugReport: "enabled={0} (raw={1}) · mode={2} (expected direct={3}) · suspended={4} · master={5} · active_layer={6} · probe_led={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
     forceSolidReading: "Forcing plain Solid Color effect (bypasses VialRGB/Direct entirely)…",
     forceSolidResult: "Mode is now {0} (enabled={1}). Look at the keyboard: does it turn solid red?",
-    debugPeerReport: "OTHER HALF: enabled={0} (raw={1}) · mode={2} · suspended={3} · master={4} · active_layer={5} · direct(h,s,v)={6},{7},{8}",
+    debugPeerReport: "OTHER HALF: enabled={0} (raw={1}) · mode={2} · suspended={3} · master={4} · active_layer={5} · direct(h,s,v)={6},{7},{8} · loop_ticks={9}",
     debugPeerFailed: "OTHER HALF: query failed (no response, or not a split setup)",
     rawBypassReading: "Bypassing the whole effect system, writing straight to the driver…",
     rawBypassResult: "Done, pushed to other half too (ok={0}). Look at the keyboard: does the WHOLE thing turn solid red?",
@@ -411,7 +411,7 @@ const I18N = {
     debugReport: "enabled={0} (brut={1}) · mode={2} (direct attendu={3}) · suspendu={4} · master={5} · layer_actif={6} · led_testée={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
     forceSolidReading: "Forçage d'un effet Solid Color standard (contourne totalement VialRGB/Direct)…",
     forceSolidResult: "Le mode est maintenant {0} (enabled={1}). Regarde le clavier : est-ce qu'il passe en rouge uni ?",
-    debugPeerReport: "AUTRE MOITIÉ : enabled={0} (brut={1}) · mode={2} · suspendu={3} · master={4} · layer_actif={5} · direct(h,s,v)={6},{7},{8}",
+    debugPeerReport: "AUTRE MOITIÉ : enabled={0} (brut={1}) · mode={2} · suspendu={3} · master={4} · layer_actif={5} · direct(h,s,v)={6},{7},{8} · ticks_boucle={9}",
     debugPeerFailed: "AUTRE MOITIÉ : requête échouée (pas de réponse, ou pas de split)",
     rawBypassReading: "Contournement total du système d'effets, écriture directe dans le driver…",
     rawBypassResult: "Fait, transmis à l'autre moitié aussi (ok={0}). Regarde le clavier : est-ce que TOUT passe en rouge uni ?",
@@ -600,8 +600,9 @@ document.getElementById('btnDebug').addEventListener('click', async () => {
     const probeIdx = selectedLeds.length ? selectedLeds[0].idx : 0;
     const d = await hidSend(new Uint8Array([0xF0, probeIdx & 0xFF]));
     const local = t('debugReport', d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15], d[16], d[17]);
+    const peerTicks = (d[28] | (d[29] << 8) | (d[30] << 16) | (d[31] << 24)) >>> 0;
     const peer = d[18] === 1
-      ? t('debugPeerReport', d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27])
+      ? t('debugPeerReport', d[19], d[20], d[21], d[22], d[23], d[24], d[25], d[26], d[27], peerTicks)
       : t('debugPeerFailed');
     setStatus(local + ' || ' + peer, d[3] === d[4] ? 'ok' : 'err');
   }catch(e){

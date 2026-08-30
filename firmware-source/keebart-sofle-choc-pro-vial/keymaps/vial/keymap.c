@@ -217,20 +217,36 @@ typedef struct __attribute__((packed)) {
     uint8_t is_master;
     uint8_t active_layer;
     HSV     direct;
+    uint32_t housekeeping_ticks; // proves the slave's own main loop is alive
 } rgb_state_query_resp_t;
+
+extern uint32_t housekeeping_ticks_get(void); // forward decl, defined after housekeeping_task_user
 
 void rgb_state_query_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
     const rgb_state_query_req_t *req  = (const rgb_state_query_req_t *)in_data;
     rgb_state_query_resp_t      *resp = (rgb_state_query_resp_t *)out_data;
     uint8_t                      probe = (req->probe < RGB_MATRIX_LED_COUNT) ? req->probe : 0;
 
-    resp->enabled      = rgb_matrix_is_enabled() ? 1 : 0;
-    resp->enable_raw   = rgb_matrix_config.enable;
-    resp->mode         = rgb_matrix_get_mode();
-    resp->suspended    = rgb_matrix_get_suspend_state() ? 1 : 0;
-    resp->is_master    = is_keyboard_master() ? 1 : 0;
-    resp->active_layer = rgb_active_layer;
-    resp->direct       = g_direct_mode_colors[probe];
+    resp->enabled            = rgb_matrix_is_enabled() ? 1 : 0;
+    resp->enable_raw         = rgb_matrix_config.enable;
+    resp->mode               = rgb_matrix_get_mode();
+    resp->suspended          = rgb_matrix_get_suspend_state() ? 1 : 0;
+    resp->is_master          = is_keyboard_master() ? 1 : 0;
+    resp->active_layer       = rgb_active_layer;
+    resp->direct             = g_direct_mode_colors[probe];
+    resp->housekeeping_ticks = housekeeping_ticks_get();
+}
+
+// DIAGNOSTIC: incremented on every main-loop tick, on BOTH halves
+// independently, with zero dependency on USB/RPC/HID. Queried via
+// RGB_STATE_QUERY to prove (or disprove) that the slave's own task loop is
+// actually alive and running, independent of anything master-related.
+static uint32_t housekeeping_ticks = 0;
+void            housekeeping_task_user(void) {
+    housekeeping_ticks++;
+}
+uint32_t housekeeping_ticks_get(void) {
+    return housekeeping_ticks;
 }
 
 void keyboard_post_init_user(void) {
@@ -245,8 +261,15 @@ void keyboard_post_init_user(void) {
         eeconfig_update_user_datablock(rgb_layer_colors, 0, sizeof(rgb_layer_colors));
     }
     apply_active_layer_to_direct_buffer();
+
+    // DIAGNOSTIC: force plain Solid Color red at boot, unconditionally, on
+    // BOTH halves independently — no USB/RPC/HID/button involved at all.
+    // This is the most basic possible test: can each half's own driver show
+    // color purely from its own local boot code? Temporarily replaces the
+    // real Direct-mode default for this diagnostic build only.
     rgb_matrix_enable_noeeprom();
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_VIALRGB_DIRECT);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+    rgb_matrix_sethsv_noeeprom(0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS);
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
@@ -334,6 +357,12 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
             data[25] = peer_resp.direct.h;
             data[26] = peer_resp.direct.s;
             data[27] = peer_resp.direct.v;
+            // Proves (or disproves) the peer's own main loop is alive,
+            // independent of anything RPC/USB/master-related.
+            data[28] = (peer_resp.housekeeping_ticks >> 0) & 0xFF;
+            data[29] = (peer_resp.housekeeping_ticks >> 8) & 0xFF;
+            data[30] = (peer_resp.housekeeping_ticks >> 16) & 0xFF;
+            data[31] = (peer_resp.housekeeping_ticks >> 24) & 0xFF;
             break;
         }
 
