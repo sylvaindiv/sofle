@@ -261,15 +261,8 @@ void keyboard_post_init_user(void) {
         eeconfig_update_user_datablock(rgb_layer_colors, 0, sizeof(rgb_layer_colors));
     }
     apply_active_layer_to_direct_buffer();
-
-    // DIAGNOSTIC: force plain Solid Color red at boot, unconditionally, on
-    // BOTH halves independently — no USB/RPC/HID/button involved at all.
-    // This is the most basic possible test: can each half's own driver show
-    // color purely from its own local boot code? Temporarily replaces the
-    // real Direct-mode default for this diagnostic build only.
     rgb_matrix_enable_noeeprom();
-    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-    rgb_matrix_sethsv_noeeprom(0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS);
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_VIALRGB_DIRECT);
 }
 
 layer_state_t layer_state_set_user(layer_state_t state) {
