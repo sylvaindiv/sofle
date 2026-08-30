@@ -104,6 +104,7 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 #define RGB_EEPROM_SAVE_CMD   0xF1
 #define RGB_DEBUG_CMD         0xF0
 #define RGB_FORCE_SOLID_CMD   0xF2 // diagnostic only: bypass VialRGB/Direct entirely
+#define RGB_RAW_BYPASS_CMD    0xF5 // diagnostic only: bypass the effect system entirely
 
 extern HSV g_direct_mode_colors[RGB_MATRIX_LED_COUNT]; // VialRGB direct-mode framebuffer, quantum/vialrgb.c
 
@@ -257,6 +258,18 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
             rgb_matrix_enable_noeeprom();
             data[1] = rgb_matrix_get_mode();
             data[2] = rgb_matrix_is_enabled() ? 1 : 0;
+            break;
+        }
+
+        // Diagnostic only: bypasses the whole effect/mode/task-state-machine
+        // system entirely — writes straight to the LED driver and forces an
+        // immediate flush. If this doesn't light up either, the bug is below
+        // the effect system (driver/task); if it does, the bug is specific
+        // to how the task state machine reaches FLUSHING for mode 45.
+        case RGB_RAW_BYPASS_CMD: {
+            rgb_matrix_set_color_all(RGB_MATRIX_MAXIMUM_BRIGHTNESS, 0, 0);
+            rgb_matrix_update_pwm_buffers();
+            data[1] = 1; // ack
             break;
         }
 
