@@ -15,7 +15,7 @@
 // Must match RGB_MAX_V in vial-rgb-editor_1.html. Overrides keyboard.json's
 // max_brightness (100), hence the #undef.
 #undef RGB_MATRIX_MAXIMUM_BRIGHTNESS
-#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 180
+#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 170
 
 // 3 layers (BASE/LOWER/RAISE) * 60 LEDs * sizeof(HSV)=3 bytes.
 #define EECONFIG_USER_DATA_SIZE 540
