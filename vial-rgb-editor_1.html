@@ -232,6 +232,32 @@
     border-radius:4px;
     font-size:12px;
   }
+  .firmware-box{
+    max-width:1100px;
+    margin-bottom:20px;
+    padding:14px 18px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    font-size:13px;
+    color:var(--muted);
+  }
+  .firmware-download-btn{
+    background:var(--accent);
+    color:#00202b;
+    font-weight:700;
+    text-decoration:none;
+    padding:9px 16px;
+    border-radius:6px;
+    font-size:13px;
+    white-space:nowrap;
+  }
+  .firmware-download-btn:hover{filter:brightness(1.1);}
+  .firmware-box strong{color:var(--danger);}
   .support-box{
     max-width:1100px;
     margin-top:20px;
@@ -277,6 +303,11 @@
     </label>
     <span id="langLabelFr" class="lang-label">FR</span>
   </div>
+</div>
+
+<div class="firmware-box">
+  <a href="./sofle_keebart_vial.uf2" download class="firmware-download-btn" data-i18n="firmwareDownload">Download firmware (.uf2)</a>
+  <span data-i18n-html="firmwareNote">Flash <strong>both</strong> keyboard halves, one at a time, with the two halves <strong>disconnected</strong> from each other.</span>
 </div>
 
 <div class="layout">
@@ -411,6 +442,8 @@ const I18N = {
     btnDeletePreset: "Delete",
     localStorageHint: "This stays in this browser (survives page reloads, but not a \"clear browsing data\").",
     statusTitle: "Status",
+    firmwareDownload: "Download firmware (.uf2)",
+    firmwareNote: "Flash <strong>both</strong> keyboard halves, one at a time, with the two halves <strong>disconnected</strong> from each other.",
     supportText: "This took 3 straight days of debugging split-keyboard RGB quirks so you don't have to. If it saved you the headache, a coffee would make my day.",
     supportLink: "Buy me a coffee ☕",
     errNoResponse: "No response from keyboard ({0})",
@@ -491,6 +524,8 @@ const I18N = {
     btnDeletePreset: "Supprimer",
     localStorageHint: "Ça reste dans ce navigateur (survit aux rechargements de page, mais pas à un \"effacer les données de navigation\").",
     statusTitle: "Statut",
+    firmwareDownload: "Télécharger le firmware (.uf2)",
+    firmwareNote: "Flashe <strong>les deux</strong> moitiés du clavier, une à la fois, avec les deux moitiés <strong>débranchées</strong> l'une de l'autre.",
     supportText: "Ça m'a pris 3 jours pleins à débugger les bizarreries RGB d'un clavier split pour que t'aies pas à le faire. Si ça t'a évité la galère, un café me ferait très plaisir.",
     supportLink: "Offre-moi un café ☕",
     errNoResponse: "Pas de réponse du clavier ({0})",
@@ -557,6 +592,7 @@ function applyI18n(){
   document.documentElement.lang = currentLang;
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
   document.getElementById('langToggle').checked = currentLang === 'fr';
   document.getElementById('langLabelEn').classList.toggle('active', currentLang === 'en');
   document.getElementById('langLabelFr').classList.toggle('active', currentLang === 'fr');
