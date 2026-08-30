@@ -8,8 +8,9 @@ Ce repo est public et librement réutilisable pour builder son propre Sofle avec
 
 - `*.uf2` — firmware Vial précompilé à flasher sur le clavier
 - `index.html`, `vial-rgb-editor_1.html` — éditeur RGB per-key (standalone, s'ouvre dans le navigateur)
-- `sofle-layout-mapper.html` / `sofle-layout-map.json` — mapping du layout clavier
+- `sofle-layout-map.json` — mapping du layout clavier
 - `netlify-deploy/` — version déployée sur Netlify
+- `firmware-source/` — code source complet du firmware (voir son [README](firmware-source/keebart-sofle-choc-pro-vial/README.md))
 
 ## Flasher le firmware
 
@@ -24,3 +25,7 @@ Le firmware supporte [Vial](https://get.vial.today/) pour les keymaps. Pour le R
 ## Forker
 
 Fork ce repo, remplace le `.uf2` par ton propre build si besoin, et adapte `sofle-layout-map.json` à ton layout.
+
+## Recompiler le firmware / l'adapter à un autre clavier split
+
+Le code source complet (pas juste le binaire) est dans `firmware-source/`. Si tu veux le recompiler ou l'adapter à un autre clavier split compatible VialRGB, commence par [`firmware-source/keebart-sofle-choc-pro-vial/TROUBLESHOOTING.md`](firmware-source/keebart-sofle-choc-pro-vial/TROUBLESHOOTING.md) — ça documente tous les bugs rencontrés (perte de la source, mode RGB Direct qui ne s'affiche pas sur un split, changement de layer non synchronisé vers la moitié esclave) et une checklist de portage.

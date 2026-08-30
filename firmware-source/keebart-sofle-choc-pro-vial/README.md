@@ -62,60 +62,56 @@ not covered here.
   `eeconfig_update_user_datablock` (`EECONFIG_USER_DATA_SIZE = 540`), and
   pushes it to the other half so both EEPROMs stay in sync.
 - `RGB_DEBUG_CMD` (`0xF0`) — internal diagnostic snapshot (enabled state,
-  active vs. expected direct-mode effect id, LED0/LED30 colors).
+  active vs. expected direct-mode effect id, a caller-supplied probe LED's
+  colors, plus a round-trip query of the *other* half's own state). UI button
+  hidden by default (`style="display:none"` in the HTML) — unhide it to
+  troubleshoot, the firmware side always responds to it.
 - `layer_state_set_user` — repaints `g_direct_mode_colors` from
-  `rgb_layer_colors[active_layer]` whenever the active layer changes, so the
-  physical LEDs track per-layer colors instead of only whatever the last HID
-  write pushed.
-- Split sync (`transaction_register_rpc`, transaction id `RGB_DIRECT_SYNC`) —
-  QMK's built-in `RGB_MATRIX_SPLIT` transport sync only covers rgb_matrix
-  mode/hsv/speed, never the per-LED VialRGB direct-mode buffer, so this
-  pushes one layer's 180-byte color block (plus a persist flag) to the slave
-  half per RPC call (the RPC transfer-size field is a `uint8_t`, capping any
-  single call at 255 bytes — a full 3-layer, 540-byte table doesn't fit in
-  one call, hence one call per layer).
+  `rgb_layer_colors[active_layer]` whenever the active layer changes, **and**
+  pushes the new active layer to the other half via `RGB_LAYER_ACTIVE_SYNC`
+  (see "Known bugs" below — this hook only ever fires on the master).
+- Split sync (`transaction_register_rpc`) — QMK's built-in `RGB_MATRIX_SPLIT`
+  transport sync only covers rgb_matrix mode/hsv/speed, never the per-LED
+  VialRGB direct-mode buffer or which layer is active, so this keymap adds
+  its own transaction ids: `RGB_DIRECT_SYNC` (pushes one layer's 180-byte
+  color block, plus a persist flag, to the slave — one call per layer since
+  the RPC transfer-size field is a `uint8_t`, capping any single call at 255
+  bytes), `RGB_LAYER_ACTIVE_SYNC` (pushes the active layer index), and
+  `RGB_STATE_QUERY` (round-trip diagnostic read of the peer's state).
+  `RGB_FORCE_SOLID_CMD` (`0xF2`) / `RGB_RAW_BYPASS_CMD` (`0xF5`) /
+  `RGB_RAW_BYPASS_SYNC` are diagnostic-only leftovers from debugging the
+  split rendering bug below; harmless to keep, safe to delete if you want a
+  cleaner keymap.
 
 ## Required upstream patch
 
 `patches/vialrgb_direct_anim.h` fixes a real bug in stock
-`Keebart/vial-qmk-sofle-choc-pro` (`quantum/rgb_matrix/animations/vialrgb_direct_anim.h`)
-that breaks VialRGB Direct mode on **split** keyboards: the effect's
-"am I done rendering this frame?" check was hardcoded as
-`return led_max < RGB_MATRIX_LED_COUNT;` (60), instead of the split-aware
-`rgb_matrix_check_finished_leds(led_max)` that every other built-in effect
-(e.g. `SOLID_COLOR`) correctly uses. On the **left** half specifically,
-`RGB_MATRIX_SPLIT`-aware rendering caps `led_max` at 30 (its own LED count)
-— so `30 < 60` never becomes false, the effect never reports "finished",
-and the render task state machine never reaches the `FLUSHING` step that
-actually pushes data to the LED driver. Net effect: the left half looks
-completely dead under Direct mode (mode/buffer state is all correct if you
-inspect it — nothing is visibly wrong until you check what actually reaches
-the driver), while the right half works because its own `led_max` does
-legitimately reach 60. This one-line fix must be applied to the cloned
-QMK tree after checkout (step 2b above) — it lives outside
-`keymaps/vial/` so it isn't part of the keymap copy.
+`Keebart/vial-qmk-sofle-choc-pro` for split keyboards — see
+[`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md) for the full writeup of this
+and every other split-specific bug found while rebuilding this firmware,
+plus a porting checklist if you're adapting this to a different split
+VialRGB board. This one-line fix must be applied to the cloned QMK tree
+after checkout (step 2b above) — it lives outside `keymaps/vial/` so it
+isn't part of the keymap copy.
 
-Diagnosing this took a long back-and-forth over HID debug round-trips
-(comparing internal state vs. actual LED output, testing Solid Color vs.
-Direct mode, bypassing the effect system entirely, and finally comparing
-the two effects' source line by line). If VialRGB Direct mode ever breaks
-again on this board, re-check this exact function first.
-
-## Known-uncertain / needs testing on real hardware
+## Notes
 
 - `RGB_MATRIX_MAXIMUM_BRIGHTNESS` is `170` in `config.h` (deliberately
   chosen, not the Keebart stock `keyboard.json` value of `100`) — also
   reflected in `RGB_MAX_V` in `vial-rgb-editor_1.html`, keep both in sync
   if changed.
 - Factory-default colors (`rgb_layer_defaults` in `keymap.c`, used only on
-  first boot / invalid EEPROM) are a simple guess — white/blue/orange for
-  BASE/LOWER/RAISE — not a recovery of the original defaults, which are
-  unknown. Change freely; they only matter before the first "Save
-  permanently" from the editor.
+  first boot / invalid EEPROM) are the user's actual last known-good
+  per-key config, recovered from a browser preset export
+  (`vialrgb-presets-backup.json`) and converted from row/col to LED index
+  via `keyboard.json`'s `rgb_matrix.layout`. They only take effect before
+  the first "Save permanently" from the editor, or after an EEPROM reset.
+  The editor's "Default configuration" button applies this same data
+  on demand, independent of EEPROM state.
 - Stock VialRGB's own `DIRECT_FASTSET`/`SET_MODE` HID commands (used by the
-  editor's "Quick test: all LEDs = red" button only) are **not** synced to
-  the other half — only this keymap's own `CMD_RGB_LAYER_SET`/`RGB_DIRECT_SYNC`
-  protocol (used by "Apply to keyboard") is. That quick-test button is only
-  expected to light up the USB-connected half; this is a pre-existing
-  limitation of stock VialRGB Direct mode on any split board, not something
-  this keymap needs to fix.
+  editor's "Quick test: all LEDs = red" button only, hidden by default) are
+  **not** synced to the other half — only this keymap's own
+  `CMD_RGB_LAYER_SET`/`RGB_DIRECT_SYNC` protocol (used by "Apply to
+  keyboard") is. That quick-test button is only expected to light up the
+  USB-connected half; this is a pre-existing limitation of stock VialRGB
+  Direct mode on any split board, not something this keymap needs to fix.
