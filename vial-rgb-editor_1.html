@@ -232,6 +232,34 @@
     border-radius:4px;
     font-size:12px;
   }
+  .support-box{
+    max-width:1100px;
+    margin-top:20px;
+    padding:16px 20px;
+    background:linear-gradient(135deg, rgba(255,159,67,.15), rgba(57,208,255,.08));
+    border:1px solid var(--accent2);
+    border-radius:10px;
+    font-size:15px;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+    text-align:center;
+  }
+  .support-box a{
+    color:#00202b;
+    background:var(--accent2);
+    font-weight:700;
+    text-decoration:none;
+    padding:10px 20px;
+    border-radius:8px;
+    font-size:15px;
+    transition:filter .15s, transform .15s;
+    display:inline-block;
+  }
+  .support-box a:hover{filter:brightness(1.1);transform:translateY(-1px);}
 </style>
 </head>
 <body>
@@ -319,6 +347,11 @@
 
 </div>
 
+<div class="support-box">
+  <span data-i18n="supportText">Found this useful?</span>
+  <a href="https://paypal.me/sylvaindiv" target="_blank" rel="noopener" data-i18n="supportLink">Buy me a coffee ☕</a>
+</div>
+
 <script>
 const MSG_LEN = 32;
 const RGB_MAX_V = 170; // must match RGB_MATRIX_MAXIMUM_BRIGHTNESS in the firmware
@@ -378,6 +411,8 @@ const I18N = {
     btnDeletePreset: "Delete",
     localStorageHint: "This stays in this browser (survives page reloads, but not a \"clear browsing data\").",
     statusTitle: "Status",
+    supportText: "This took 3 straight days of debugging split-keyboard RGB quirks so you don't have to. If it saved you the headache, a coffee would make my day.",
+    supportLink: "Buy me a coffee ☕",
     errNoResponse: "No response from keyboard ({0})",
     errWebHidUnavailable: "WebHID unavailable — use Chrome or Edge.",
     errNoDeviceSelected: "No keyboard selected.",
@@ -456,6 +491,8 @@ const I18N = {
     btnDeletePreset: "Supprimer",
     localStorageHint: "Ça reste dans ce navigateur (survit aux rechargements de page, mais pas à un \"effacer les données de navigation\").",
     statusTitle: "Statut",
+    supportText: "Ça m'a pris 3 jours pleins à débugger les bizarreries RGB d'un clavier split pour que t'aies pas à le faire. Si ça t'a évité la galère, un café me ferait très plaisir.",
+    supportLink: "Offre-moi un café ☕",
     errNoResponse: "Pas de réponse du clavier ({0})",
     errWebHidUnavailable: "WebHID indisponible — utilise Chrome ou Edge.",
     errNoDeviceSelected: "Aucun clavier sélectionné.",
