@@ -99,10 +99,11 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 
 #define RGB_LAYER_COUNT 3 // BASE, LOWER, RAISE — must match `enum layers` above
 
-#define CMD_RGB_LAYER_GET   0xF3
-#define CMD_RGB_LAYER_SET   0xF4
-#define RGB_EEPROM_SAVE_CMD 0xF1
-#define RGB_DEBUG_CMD       0xF0
+#define CMD_RGB_LAYER_GET     0xF3
+#define CMD_RGB_LAYER_SET     0xF4
+#define RGB_EEPROM_SAVE_CMD   0xF1
+#define RGB_DEBUG_CMD         0xF0
+#define RGB_FORCE_SOLID_CMD   0xF2 // diagnostic only: bypass VialRGB/Direct entirely
 
 extern HSV g_direct_mode_colors[RGB_MATRIX_LED_COUNT]; // VialRGB direct-mode framebuffer, quantum/vialrgb.c
 
@@ -208,6 +209,19 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
             eeconfig_update_user_datablock(rgb_layer_colors, 0, sizeof(rgb_layer_colors));
             rgb_layer_colors_push_all_to_slave(true);
             data[1] = 1; // ack
+            break;
+        }
+
+        // Diagnostic only: switches to plain RGB_MATRIX_SOLID_COLOR (no
+        // VialRGB, no Direct mode, no per-key data at all) at max brightness,
+        // to tell apart "the LED driver/task pipeline is broken" from "only
+        // our Direct-mode path is broken".
+        case RGB_FORCE_SOLID_CMD: {
+            rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+            rgb_matrix_sethsv_noeeprom(0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS);
+            rgb_matrix_enable_noeeprom();
+            data[1] = rgb_matrix_get_mode();
+            data[2] = rgb_matrix_is_enabled() ? 1 : 0;
             break;
         }
 

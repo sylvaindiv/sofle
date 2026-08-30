@@ -201,6 +201,7 @@
       <button id="btnConnect" class="primary" data-i18n="btnConnect">Connect keyboard</button>
       <button id="btnTestRed" disabled class="warn" data-i18n="btnTestRed">Quick test: all LEDs = red</button>
       <button id="btnDebug" disabled class="warn" data-i18n="btnDebug">Firmware internal debug</button>
+      <button id="btnForceSolid" disabled class="warn" data-i18n="btnForceSolid">Diagnostic: force solid red (bypass Direct)</button>
       <select id="layerSelect" disabled style="max-width:150px;">
         <option value="0" data-i18n="layerBase">Layer 0</option>
         <option value="1" data-i18n="layerLower">Layer 1</option>
@@ -288,6 +289,7 @@ const I18N = {
     btnConnect: "Connect keyboard",
     btnTestRed: "Quick test: all LEDs = red",
     btnDebug: "Firmware internal debug",
+    btnForceSolid: "Diagnostic: force solid red (bypass Direct)",
     layerBase: "Layer 0",
     layerLower: "Layer 1",
     layerRaise: "Layer 2",
@@ -330,6 +332,8 @@ const I18N = {
     errTest: "Test error: {0}",
     debugReading: "Reading firmware internal state…",
     debugReport: "enabled={0} (raw={1}) · mode={2} (expected direct={3}) · suspended={4} · master={5} · active_layer={6} · probe_led={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
+    forceSolidReading: "Forcing plain Solid Color effect (bypasses VialRGB/Direct entirely)…",
+    forceSolidResult: "Mode is now {0} (enabled={1}). Look at the keyboard: does it turn solid red?",
     errDebug: "Debug error: {0}",
     loadingLed: "Loading LED {0}/{1}…",
     readingLayerColors: "Reading colors — layer {0}…",
@@ -355,6 +359,7 @@ const I18N = {
     btnConnect: "Connecter le clavier",
     btnTestRed: "Test rapide : toutes les LEDs = rouge",
     btnDebug: "Debug interne firmware",
+    btnForceSolid: "Diagnostic : forcer rouge uni (contourne Direct)",
     layerBase: "Layer 0",
     layerLower: "Layer 1",
     layerRaise: "Layer 2",
@@ -397,6 +402,8 @@ const I18N = {
     errTest: "Erreur au test : {0}",
     debugReading: "Lecture de l'état interne du firmware…",
     debugReport: "enabled={0} (brut={1}) · mode={2} (direct attendu={3}) · suspendu={4} · master={5} · layer_actif={6} · led_testée={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
+    forceSolidReading: "Forçage d'un effet Solid Color standard (contourne totalement VialRGB/Direct)…",
+    forceSolidResult: "Le mode est maintenant {0} (enabled={1}). Regarde le clavier : est-ce qu'il passe en rouge uni ?",
     errDebug: "Erreur au debug : {0}",
     loadingLed: "Chargement LED {0}/{1}…",
     readingLayerColors: "Lecture des couleurs — layer {0}…",
@@ -531,6 +538,7 @@ async function connect(){
     deviceInfoEl.textContent = t('deviceInfoText', device.productName, vialProtocol);
     document.getElementById('btnTestRed').disabled = false;
     document.getElementById('btnDebug').disabled = false;
+    document.getElementById('btnForceSolid').disabled = false;
 
     await loadLeds();
     setStatus(t('readyLoaded', leds.length), 'ok');
@@ -581,6 +589,16 @@ document.getElementById('btnDebug').addEventListener('click', async () => {
     const d = await hidSend(new Uint8Array([0xF0, probeIdx & 0xFF]));
     const report = t('debugReport', d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15], d[16], d[17]);
     setStatus(report, d[3] === d[4] ? 'ok' : 'err');
+  }catch(e){
+    setStatus(t('errDebug', e.message), 'err');
+  }
+});
+
+document.getElementById('btnForceSolid').addEventListener('click', async () => {
+  try{
+    setStatus(t('forceSolidReading'));
+    const d = await hidSend(new Uint8Array([0xF2]));
+    setStatus(t('forceSolidResult', d[1], d[2]), 'ok');
   }catch(e){
     setStatus(t('errDebug', e.message), 'err');
   }
