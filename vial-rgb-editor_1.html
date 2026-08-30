@@ -267,6 +267,7 @@
       </select>
       <button id="btnApply" disabled data-i18n="btnApply">Apply to keyboard</button>
       <button id="btnSaveEeprom" disabled class="warn" data-i18n="btnSaveEeprom">Save permanently to keyboard</button>
+      <button id="btnDefaultConfig" disabled data-i18n="btnDefaultConfig">Default configuration</button>
     </div>
     <div id="status" data-i18n="statusDisconnected">Not connected.</div>
     <div id="board"></div>
@@ -338,6 +339,10 @@ const LAYER_NAMES = ['0', '1', '2'];
 const STORAGE_KEY = "vialrgb_editor_config_v1";
 const LANG_KEY = "vialrgb_lang";
 
+// Recovered from the user's last exported browser preset backup
+// (vialrgb-presets-backup.json), keyed by layer index then "row_col".
+const DEFAULT_CONFIG = {"0":{"4_5":{"h":0,"s":255,"v":255},"4_4":{"h":85,"s":255,"v":255},"4_3":{"h":85,"s":255,"v":255},"3_5":{"h":43,"s":255,"v":255},"2_5":{"h":43,"s":255,"v":255},"1_5":{"h":43,"s":255,"v":255},"0_5":{"h":0,"s":255,"v":255},"0_4":{"h":0,"s":255,"v":255},"1_4":{"h":43,"s":255,"v":255},"2_4":{"h":43,"s":255,"v":255},"3_4":{"h":43,"s":255,"v":255},"4_2":{"h":128,"s":255,"v":255},"4_1":{"h":128,"s":255,"v":255},"3_3":{"h":43,"s":255,"v":255},"2_3":{"h":43,"s":255,"v":255},"1_3":{"h":43,"s":255,"v":255},"0_3":{"h":0,"s":255,"v":255},"0_2":{"h":0,"s":255,"v":255},"1_2":{"h":43,"s":255,"v":255},"2_2":{"h":43,"s":255,"v":255},"3_2":{"h":43,"s":255,"v":255},"4_0":{"h":128,"s":255,"v":255},"3_1":{"h":43,"s":255,"v":255},"2_1":{"h":43,"s":255,"v":255},"1_1":{"h":43,"s":255,"v":255},"0_1":{"h":0,"s":255,"v":255},"0_0":{"h":128,"s":255,"v":255},"1_0":{"h":128,"s":255,"v":255},"2_0":{"h":128,"s":255,"v":255},"3_0":{"h":128,"s":255,"v":255},"9_5":{"h":0,"s":255,"v":255},"9_4":{"h":85,"s":255,"v":255},"9_3":{"h":85,"s":255,"v":255},"8_5":{"h":43,"s":255,"v":255},"7_5":{"h":43,"s":255,"v":255},"6_5":{"h":43,"s":255,"v":255},"5_5":{"h":0,"s":255,"v":255},"5_4":{"h":0,"s":255,"v":255},"6_4":{"h":43,"s":255,"v":255},"7_4":{"h":43,"s":255,"v":255},"8_4":{"h":85,"s":255,"v":255},"9_2":{"h":128,"s":255,"v":255},"9_1":{"h":128,"s":255,"v":255},"8_3":{"h":85,"s":255,"v":255},"7_3":{"h":43,"s":255,"v":255},"6_3":{"h":43,"s":255,"v":255},"5_3":{"h":0,"s":255,"v":255},"5_2":{"h":0,"s":255,"v":255},"6_2":{"h":43,"s":255,"v":255},"7_2":{"h":43,"s":255,"v":255},"8_2":{"h":85,"s":255,"v":255},"9_0":{"h":128,"s":255,"v":255},"8_1":{"h":85,"s":255,"v":255},"7_1":{"h":43,"s":255,"v":255},"6_1":{"h":43,"s":255,"v":255},"5_1":{"h":0,"s":255,"v":255},"5_0":{"h":128,"s":255,"v":255},"6_0":{"h":128,"s":255,"v":255},"7_0":{"h":128,"s":255,"v":255},"8_0":{"h":128,"s":255,"v":255}},"1":{"4_5":{"h":0,"s":0,"v":0},"4_4":{"h":0,"s":0,"v":0},"4_3":{"h":0,"s":0,"v":0},"3_5":{"h":0,"s":0,"v":0},"2_5":{"h":0,"s":0,"v":0},"1_5":{"h":0,"s":0,"v":0},"0_5":{"h":0,"s":0,"v":0},"0_4":{"h":0,"s":0,"v":0},"1_4":{"h":0,"s":0,"v":0},"2_4":{"h":0,"s":0,"v":0},"3_4":{"h":0,"s":0,"v":0},"4_2":{"h":0,"s":0,"v":0},"4_1":{"h":0,"s":0,"v":0},"3_3":{"h":0,"s":0,"v":0},"2_3":{"h":0,"s":0,"v":0},"1_3":{"h":0,"s":0,"v":0},"0_3":{"h":0,"s":0,"v":0},"0_2":{"h":0,"s":0,"v":0},"1_2":{"h":0,"s":0,"v":0},"2_2":{"h":0,"s":0,"v":0},"3_2":{"h":0,"s":0,"v":0},"4_0":{"h":0,"s":0,"v":0},"3_1":{"h":0,"s":0,"v":0},"2_1":{"h":0,"s":0,"v":0},"1_1":{"h":0,"s":0,"v":0},"0_1":{"h":0,"s":0,"v":0},"0_0":{"h":0,"s":255,"v":255},"1_0":{"h":0,"s":0,"v":0},"2_0":{"h":0,"s":0,"v":0},"3_0":{"h":0,"s":0,"v":0},"9_5":{"h":0,"s":255,"v":255},"9_4":{"h":0,"s":0,"v":0},"9_3":{"h":128,"s":255,"v":255},"8_5":{"h":0,"s":0,"v":0},"7_5":{"h":0,"s":0,"v":0},"6_5":{"h":0,"s":0,"v":0},"5_5":{"h":0,"s":0,"v":0},"5_4":{"h":0,"s":0,"v":0},"6_4":{"h":128,"s":255,"v":255},"7_4":{"h":128,"s":255,"v":255},"8_4":{"h":128,"s":255,"v":255},"9_2":{"h":128,"s":255,"v":255},"9_1":{"h":0,"s":0,"v":0},"8_3":{"h":128,"s":255,"v":255},"7_3":{"h":128,"s":255,"v":255},"6_3":{"h":128,"s":255,"v":255},"5_3":{"h":43,"s":255,"v":255},"5_2":{"h":43,"s":255,"v":255},"6_2":{"h":128,"s":255,"v":255},"7_2":{"h":128,"s":255,"v":255},"8_2":{"h":128,"s":255,"v":255},"9_0":{"h":85,"s":255,"v":255},"8_1":{"h":85,"s":255,"v":255},"7_1":{"h":43,"s":255,"v":255},"6_1":{"h":43,"s":255,"v":255},"5_1":{"h":43,"s":255,"v":255},"5_0":{"h":0,"s":0,"v":0},"6_0":{"h":0,"s":0,"v":0},"7_0":{"h":0,"s":0,"v":0},"8_0":{"h":0,"s":0,"v":0}},"2":{"4_5":{"h":0,"s":0,"v":0},"4_4":{"h":43,"s":255,"v":255},"4_3":{"h":0,"s":0,"v":0},"3_5":{"h":0,"s":0,"v":0},"2_5":{"h":0,"s":0,"v":0},"1_5":{"h":0,"s":0,"v":0},"0_5":{"h":0,"s":0,"v":0},"0_4":{"h":0,"s":0,"v":0},"1_4":{"h":0,"s":0,"v":0},"2_4":{"h":0,"s":0,"v":0},"3_4":{"h":0,"s":0,"v":0},"4_2":{"h":0,"s":0,"v":0},"4_1":{"h":0,"s":0,"v":0},"3_3":{"h":0,"s":0,"v":0},"2_3":{"h":0,"s":0,"v":0},"1_3":{"h":85,"s":255,"v":255},"0_3":{"h":0,"s":0,"v":0},"0_2":{"h":0,"s":0,"v":0},"1_2":{"h":0,"s":0,"v":0},"2_2":{"h":85,"s":255,"v":255},"3_2":{"h":0,"s":0,"v":0},"4_0":{"h":0,"s":0,"v":0},"3_1":{"h":0,"s":0,"v":0},"2_1":{"h":0,"s":0,"v":0},"1_1":{"h":0,"s":0,"v":0},"0_1":{"h":0,"s":0,"v":0},"0_0":{"h":0,"s":255,"v":255},"1_0":{"h":0,"s":0,"v":0},"2_0":{"h":0,"s":0,"v":0},"3_0":{"h":0,"s":0,"v":0},"9_5":{"h":0,"s":255,"v":255},"9_4":{"h":0,"s":0,"v":0},"9_3":{"h":128,"s":255,"v":255},"8_5":{"h":43,"s":255,"v":255},"7_5":{"h":43,"s":255,"v":255},"6_5":{"h":43,"s":255,"v":255},"5_5":{"h":43,"s":255,"v":255},"5_4":{"h":0,"s":0,"v":0},"6_4":{"h":0,"s":0,"v":0},"7_4":{"h":85,"s":255,"v":255},"8_4":{"h":0,"s":0,"v":0},"9_2":{"h":128,"s":255,"v":255},"9_1":{"h":0,"s":0,"v":0},"8_3":{"h":0,"s":0,"v":0},"7_3":{"h":85,"s":255,"v":255},"6_3":{"h":85,"s":255,"v":255},"5_3":{"h":0,"s":0,"v":0},"5_2":{"h":0,"s":255,"v":255},"6_2":{"h":128,"s":255,"v":255},"7_2":{"h":85,"s":255,"v":255},"8_2":{"h":0,"s":0,"v":0},"9_0":{"h":128,"s":255,"v":255},"8_1":{"h":0,"s":0,"v":0},"7_1":{"h":0,"s":0,"v":0},"6_1":{"h":128,"s":255,"v":255},"5_1":{"h":0,"s":255,"v":255},"5_0":{"h":0,"s":255,"v":255},"6_0":{"h":128,"s":255,"v":255},"7_0":{"h":0,"s":0,"v":0},"8_0":{"h":0,"s":0,"v":0}}};
+
 // --- i18n ---
 const I18N = {
   en: {
@@ -354,6 +359,7 @@ const I18N = {
     layerRaise: "Layer 2",
     btnApply: "Apply to keyboard",
     btnSaveEeprom: "Save permanently to keyboard",
+    btnDefaultConfig: "Default configuration",
     statusDisconnected: "Not connected.",
     hint: "Click an LED to add/remove it from the selection (multiple at once), then pick a color on the right — it applies to the whole selection. Square keys = matrix LEDs (per-key). Circles = underglow, and only appear if your keyboard's firmware reports underglow LEDs — if your board has none, you'll only ever see squares. The config is auto-saved in this browser (localStorage).",
     selectionTitle: "Selection",
@@ -384,6 +390,8 @@ const I18N = {
     eepromSaving: "Saving to EEPROM…",
     eepromSaved: "Colors permanently saved to keyboard.",
     eepromFailed: "Save failed.",
+    defaultConfigApplying: "Applying default configuration to all 3 layers…",
+    defaultConfigApplied: "Default configuration applied to all 3 layers. Click \"Save permanently\" to keep it after a reboot.",
     testReadingCount: "Test: reading LED count…",
     testSending: "Sending: {0} LEDs = red…",
     testSentOk: "Sent for {0} LEDs. Mode read back from keyboard: {1} (Direct — OK)",
@@ -429,6 +437,7 @@ const I18N = {
     layerRaise: "Layer 2",
     btnApply: "Appliquer sur le clavier",
     btnSaveEeprom: "Enregistrer définitivement sur le clavier",
+    btnDefaultConfig: "Configuration par défaut",
     statusDisconnected: "Non connecté.",
     hint: "Clique une LED pour l'ajouter/retirer de la sélection (plusieurs à la fois possible), choisis une couleur à droite — elle s'applique à toute la sélection. Les touches carrées = LEDs de matrice (per-key). Les ronds = underglow, et n'apparaissent que si le firmware de ton clavier remonte des LEDs underglow — si ton clavier n'en a pas, tu ne verras jamais que des carrés. La config est sauvegardée automatiquement dans ce navigateur (localStorage).",
     selectionTitle: "Sélection",
@@ -459,6 +468,8 @@ const I18N = {
     eepromSaving: "Enregistrement en EEPROM…",
     eepromSaved: "Couleurs enregistrées définitivement sur le clavier.",
     eepromFailed: "Échec de l'enregistrement.",
+    defaultConfigApplying: "Application de la configuration par défaut sur les 3 layers…",
+    defaultConfigApplied: "Configuration par défaut appliquée aux 3 layers. Clique \"Enregistrer définitivement\" pour la garder après un redémarrage.",
     testReadingCount: "Test : lecture du nombre de LEDs…",
     testSending: "Envoi : {0} LEDs = rouge…",
     testSentOk: "Envoyé pour {0} LEDs. Mode relu sur le clavier : {1} (Direct — OK)",
@@ -615,6 +626,7 @@ async function connect(){
     setStatus(t('readyLoaded', leds.length), 'ok');
     document.getElementById('btnApply').disabled = false;
     document.getElementById('btnSaveEeprom').disabled = false;
+    document.getElementById('btnDefaultConfig').disabled = false;
     document.getElementById('layerSelect').disabled = false;
   }catch(e){
     setStatus(t('errGeneric', e.message), 'err');
@@ -648,6 +660,27 @@ document.getElementById('btnSaveEeprom').addEventListener('click', async () => {
     setStatus(t('eepromSaving'));
     const resp = await hidSend(new Uint8Array([0xF1]));
     setStatus(resp[1] === 1 ? t('eepromSaved') : t('eepromFailed'), resp[1] === 1 ? 'ok' : 'err');
+  }catch(e){
+    setStatus(t('errGeneric', e.message), 'err');
+  }
+});
+
+document.getElementById('btnDefaultConfig').addEventListener('click', async () => {
+  try{
+    setStatus(t('defaultConfigApplying'));
+    for (let layer = 0; layer < 3; layer++){
+      const cfg = DEFAULT_CONFIG[layer];
+      const entries = leds.map(l => {
+        const c = cfg[l.key];
+        return c ? { idx: l.idx, h: c.h, s: c.s, v: Math.min(c.v, RGB_MAX_V) } : { idx: l.idx, h: 0, s: 0, v: 0 };
+      });
+      await applyLayerColors(layer, entries);
+      layerCache[layer] = {};
+      entries.forEach(e => { layerCache[layer][e.idx] = { h: e.h, s: e.s, v: e.v }; });
+    }
+    applyLayerCacheToLeds(currentLayer);
+    renderBoard();
+    setStatus(t('defaultConfigApplied'), 'ok');
   }catch(e){
     setStatus(t('errGeneric', e.message), 'err');
   }
