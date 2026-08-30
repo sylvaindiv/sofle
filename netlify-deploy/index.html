@@ -329,7 +329,7 @@ const I18N = {
     testSentErr: "Sent for {0} LEDs. Mode read back from keyboard: {1} (NOT Direct — mode didn't take!)",
     errTest: "Test error: {0}",
     debugReading: "Reading firmware internal state…",
-    debugReport: "enabled={0} · active_mode={1} · expected_direct_id={2} · max_effects={3} · led0(h,s,v)={4},{5},{6} · led30(h,s,v)={7},{8},{9}",
+    debugReport: "enabled={0} (raw={1}) · mode={2} (expected direct={3}) · suspended={4} · master={5} · active_layer={6} · probe_led={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
     errDebug: "Debug error: {0}",
     loadingLed: "Loading LED {0}/{1}…",
     readingLayerColors: "Reading colors — layer {0}…",
@@ -396,7 +396,7 @@ const I18N = {
     testSentErr: "Envoyé pour {0} LEDs. Mode relu sur le clavier : {1} (PAS Direct — le mode n'a pas pris !)",
     errTest: "Erreur au test : {0}",
     debugReading: "Lecture de l'état interne du firmware…",
-    debugReport: "enabled={0} · mode_actif={1} · id_direct_attendu={2} · nb_effets_max={3} · led0(h,s,v)={4},{5},{6} · led30(h,s,v)={7},{8},{9}",
+    debugReport: "enabled={0} (brut={1}) · mode={2} (direct attendu={3}) · suspendu={4} · master={5} · layer_actif={6} · led_testée={7} · direct(h,s,v)={8},{9},{10} · ram(h,s,v)={11},{12},{13} · rgb(r,g,b)={14},{15},{16}",
     errDebug: "Erreur au debug : {0}",
     loadingLed: "Chargement LED {0}/{1}…",
     readingLayerColors: "Lecture des couleurs — layer {0}…",
@@ -577,9 +577,10 @@ document.getElementById('btnSaveEeprom').addEventListener('click', async () => {
 document.getElementById('btnDebug').addEventListener('click', async () => {
   try{
     setStatus(t('debugReading'));
-    const d = await hidSend(new Uint8Array([0xF0]));
-    const report = t('debugReport', d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10]);
-    setStatus(report, d[2] === d[3] ? 'ok' : 'err');
+    const probeIdx = selectedLeds.length ? selectedLeds[0].idx : 0;
+    const d = await hidSend(new Uint8Array([0xF0, probeIdx & 0xFF]));
+    const report = t('debugReport', d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15], d[16], d[17]);
+    setStatus(report, d[3] === d[4] ? 'ok' : 'err');
   }catch(e){
     setStatus(t('errDebug', e.message), 'err');
   }

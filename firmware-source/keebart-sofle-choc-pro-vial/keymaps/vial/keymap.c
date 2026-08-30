@@ -212,16 +212,30 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
         }
 
         case RGB_DEBUG_CMD: {
-            data[1]  = rgb_matrix_is_enabled() ? 1 : 0;
-            data[2]  = rgb_matrix_get_mode();
-            data[3]  = RGB_MATRIX_VIALRGB_DIRECT;
-            data[4]  = (uint8_t)RGB_MATRIX_EFFECT_MAX;
-            data[5]  = g_direct_mode_colors[0].h;
-            data[6]  = g_direct_mode_colors[0].s;
-            data[7]  = g_direct_mode_colors[0].v;
-            data[8]  = g_direct_mode_colors[30].h;
-            data[9]  = g_direct_mode_colors[30].s;
-            data[10] = g_direct_mode_colors[30].v;
+            // Probe LED index is caller-supplied (data[1] on the request) so
+            // we inspect whatever LED was actually just painted, instead of
+            // a hardcoded guess.
+            uint8_t probe = data[1];
+            if (probe >= RGB_MATRIX_LED_COUNT) probe = 0;
+
+            data[1]  = rgb_matrix_is_enabled() ? 1 : 0;      // runtime enable
+            data[2]  = rgb_matrix_config.enable;             // raw eeprom-backed enable field (0/1/2/3, 2-bit)
+            data[3]  = rgb_matrix_get_mode();                // active effect id
+            data[4]  = RGB_MATRIX_VIALRGB_DIRECT;            // expected effect id for Direct
+            data[5]  = rgb_matrix_get_suspend_state() ? 1 : 0;
+            data[6]  = is_keyboard_master() ? 1 : 0;
+            data[7]  = rgb_active_layer;                     // our own tracked "active" layer
+            data[8]  = probe;                                // which LED index this report is about
+            data[9]  = g_direct_mode_colors[probe].h;         // what's actually being rendered
+            data[10] = g_direct_mode_colors[probe].s;
+            data[11] = g_direct_mode_colors[probe].v;
+            data[12] = rgb_layer_colors[rgb_active_layer][probe].h; // what's stored for the active layer in RAM
+            data[13] = rgb_layer_colors[rgb_active_layer][probe].s;
+            data[14] = rgb_layer_colors[rgb_active_layer][probe].v;
+            RGB rgb  = hsv_to_rgb(g_direct_mode_colors[probe]);
+            data[15] = rgb.r;                                 // actual HSV->RGB conversion firmware would push to the LED driver
+            data[16] = rgb.g;
+            data[17] = rgb.b;
             break;
         }
 
