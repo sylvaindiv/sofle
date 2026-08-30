@@ -182,8 +182,43 @@ static void rgb_layer_colors_push_all_to_slave(bool persist) {
     }
 }
 
+// --- Remote diagnostic query ---
+// raw_hid_receive_kb only ever fires on the USB-connected half, so there is
+// no other way to inspect the other half's live RAM state. This round-trip
+// RPC lets the master ask the slave to report its own rgb_matrix_config /
+// direct-mode buffer, for the "does the slave actually think it's in Direct
+// mode?" question that visual inspection alone can't answer.
+typedef struct __attribute__((packed)) {
+    uint8_t probe;
+} rgb_state_query_req_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t enabled;
+    uint8_t enable_raw;
+    uint8_t mode;
+    uint8_t suspended;
+    uint8_t is_master;
+    uint8_t active_layer;
+    HSV     direct;
+} rgb_state_query_resp_t;
+
+void rgb_state_query_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
+    const rgb_state_query_req_t *req  = (const rgb_state_query_req_t *)in_data;
+    rgb_state_query_resp_t      *resp = (rgb_state_query_resp_t *)out_data;
+    uint8_t                      probe = (req->probe < RGB_MATRIX_LED_COUNT) ? req->probe : 0;
+
+    resp->enabled      = rgb_matrix_is_enabled() ? 1 : 0;
+    resp->enable_raw   = rgb_matrix_config.enable;
+    resp->mode         = rgb_matrix_get_mode();
+    resp->suspended    = rgb_matrix_get_suspend_state() ? 1 : 0;
+    resp->is_master    = is_keyboard_master() ? 1 : 0;
+    resp->active_layer = rgb_active_layer;
+    resp->direct       = g_direct_mode_colors[probe];
+}
+
 void keyboard_post_init_user(void) {
     transaction_register_rpc(RGB_DIRECT_SYNC, rgb_direct_sync_slave_handler);
+    transaction_register_rpc(RGB_STATE_QUERY, rgb_state_query_slave_handler);
 
     if (eeconfig_is_user_datablock_valid()) {
         eeconfig_read_user_datablock(rgb_layer_colors, 0, sizeof(rgb_layer_colors));
@@ -250,6 +285,22 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
             data[15] = rgb.r;                                 // actual HSV->RGB conversion firmware would push to the LED driver
             data[16] = rgb.g;
             data[17] = rgb.b;
+
+            // Round-trip to the OTHER half so both sides' state show up in a
+            // single report instead of only whichever half is USB-connected.
+            rgb_state_query_req_t  peer_req  = {.probe = probe};
+            rgb_state_query_resp_t peer_resp = {0};
+            bool                   peer_ok   = transaction_rpc_exec(RGB_STATE_QUERY, sizeof(peer_req), &peer_req, sizeof(peer_resp), &peer_resp);
+            data[18] = peer_ok ? 1 : 0;
+            data[19] = peer_resp.enabled;
+            data[20] = peer_resp.enable_raw;
+            data[21] = peer_resp.mode;
+            data[22] = peer_resp.suspended;
+            data[23] = peer_resp.is_master;
+            data[24] = peer_resp.active_layer;
+            data[25] = peer_resp.direct.h;
+            data[26] = peer_resp.direct.s;
+            data[27] = peer_resp.direct.v;
             break;
         }
 

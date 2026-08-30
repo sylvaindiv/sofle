@@ -24,5 +24,5 @@
 // other half — one RPC call per layer, since the RPC transfer size field is
 // a uint8_t (max 255 bytes; a full single-layer payload is 182 bytes).
 // Default 32-byte RPC buffers are too small for that.
-#define SPLIT_TRANSACTION_IDS_USER RGB_DIRECT_SYNC
+#define SPLIT_TRANSACTION_IDS_USER RGB_DIRECT_SYNC, RGB_STATE_QUERY
 #define RPC_M2S_BUFFER_SIZE 192
