@@ -183,6 +183,14 @@ static void rgb_layer_colors_push_all_to_slave(bool persist) {
     }
 }
 
+// Diagnostic only: tells the slave to run the exact same driver-bypass test
+// as RGB_RAW_BYPASS_CMD, locally on its own side. Needed because the master
+// alone has no way to make the slave's LEDs do anything otherwise.
+void rgb_raw_bypass_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
+    rgb_matrix_set_color_all(RGB_MATRIX_MAXIMUM_BRIGHTNESS, 0, 0);
+    rgb_matrix_update_pwm_buffers();
+}
+
 // --- Remote diagnostic query ---
 // raw_hid_receive_kb only ever fires on the USB-connected half, so there is
 // no other way to inspect the other half's live RAM state. This round-trip
@@ -220,6 +228,7 @@ void rgb_state_query_slave_handler(uint8_t in_buflen, const void *in_data, uint8
 void keyboard_post_init_user(void) {
     transaction_register_rpc(RGB_DIRECT_SYNC, rgb_direct_sync_slave_handler);
     transaction_register_rpc(RGB_STATE_QUERY, rgb_state_query_slave_handler);
+    transaction_register_rpc(RGB_RAW_BYPASS_SYNC, rgb_raw_bypass_slave_handler);
 
     if (eeconfig_is_user_datablock_valid()) {
         eeconfig_read_user_datablock(rgb_layer_colors, 0, sizeof(rgb_layer_colors));
@@ -269,7 +278,10 @@ void raw_hid_receive_kb(uint8_t *data, uint8_t length) {
         case RGB_RAW_BYPASS_CMD: {
             rgb_matrix_set_color_all(RGB_MATRIX_MAXIMUM_BRIGHTNESS, 0, 0);
             rgb_matrix_update_pwm_buffers();
-            data[1] = 1; // ack
+            bool peer_ok = transaction_rpc_send(RGB_RAW_BYPASS_SYNC, 0, NULL);
+            if (!peer_ok) peer_ok = transaction_rpc_send(RGB_RAW_BYPASS_SYNC, 0, NULL);
+            data[1] = 1; // ack (this half)
+            data[2] = peer_ok ? 1 : 0; // whether the push to the other half succeeded
             break;
         }
 

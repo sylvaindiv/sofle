@@ -339,7 +339,7 @@ const I18N = {
     debugPeerReport: "OTHER HALF: enabled={0} (raw={1}) · mode={2} · suspended={3} · master={4} · active_layer={5} · direct(h,s,v)={6},{7},{8}",
     debugPeerFailed: "OTHER HALF: query failed (no response, or not a split setup)",
     rawBypassReading: "Bypassing the whole effect system, writing straight to the driver…",
-    rawBypassResult: "Done. Look at the keyboard: does it turn solid red?",
+    rawBypassResult: "Done, pushed to other half too (ok={0}). Look at the keyboard: does the WHOLE thing turn solid red?",
     errDebug: "Debug error: {0}",
     loadingLed: "Loading LED {0}/{1}…",
     readingLayerColors: "Reading colors — layer {0}…",
@@ -414,7 +414,7 @@ const I18N = {
     debugPeerReport: "AUTRE MOITIÉ : enabled={0} (brut={1}) · mode={2} · suspendu={3} · master={4} · layer_actif={5} · direct(h,s,v)={6},{7},{8}",
     debugPeerFailed: "AUTRE MOITIÉ : requête échouée (pas de réponse, ou pas de split)",
     rawBypassReading: "Contournement total du système d'effets, écriture directe dans le driver…",
-    rawBypassResult: "Fait. Regarde le clavier : est-ce qu'il passe en rouge uni ?",
+    rawBypassResult: "Fait, transmis à l'autre moitié aussi (ok={0}). Regarde le clavier : est-ce que TOUT passe en rouge uni ?",
     errDebug: "Erreur au debug : {0}",
     loadingLed: "Chargement LED {0}/{1}…",
     readingLayerColors: "Lecture des couleurs — layer {0}…",
@@ -622,8 +622,8 @@ document.getElementById('btnForceSolid').addEventListener('click', async () => {
 document.getElementById('btnRawBypass').addEventListener('click', async () => {
   try{
     setStatus(t('rawBypassReading'));
-    await hidSend(new Uint8Array([0xF5]));
-    setStatus(t('rawBypassResult'), 'ok');
+    const d = await hidSend(new Uint8Array([0xF5]));
+    setStatus(t('rawBypassResult', d[2]), 'ok');
   }catch(e){
     setStatus(t('errDebug', e.message), 'err');
   }
