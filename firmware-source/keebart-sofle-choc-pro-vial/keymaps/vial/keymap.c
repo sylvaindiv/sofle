@@ -186,9 +186,17 @@ static void rgb_layer_colors_push_all_to_slave(bool persist) {
 // Diagnostic only: tells the slave to run the exact same driver-bypass test
 // as RGB_RAW_BYPASS_CMD, locally on its own side. Needed because the master
 // alone has no way to make the slave's LEDs do anything otherwise.
+//
+// Deliberately does NOT call rgb_matrix_set_color/update_pwm_buffers directly
+// here — calling the LED driver synchronously from inside an RPC handler
+// (split serial transaction context) may not be safe/timing-compatible with
+// the WS2812 driver. Instead this only flips mode/hsv state (like the
+// already-working RGB_DIRECT_SYNC handler does for colors) and lets the
+// slave's own independent rgb_matrix_task() loop render it on its next tick.
 void rgb_raw_bypass_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
-    rgb_matrix_set_color_all(RGB_MATRIX_MAXIMUM_BRIGHTNESS, 0, 0);
-    rgb_matrix_update_pwm_buffers();
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+    rgb_matrix_sethsv_noeeprom(0, 255, RGB_MATRIX_MAXIMUM_BRIGHTNESS);
+    rgb_matrix_enable_noeeprom();
 }
 
 // --- Remote diagnostic query ---
