@@ -4,6 +4,8 @@ Vial configuration for a **Sofle Choc** split keyboard with per-key RGB, ready t
 
 This repo is public and free to reuse to build your own Sofle with per-key RGB.
 
+If this saved you some time, you can [buy me a coffee](https://paypal.me/sylvaindiv) — totally optional, no strings attached.
+
 ## Contents
 
 - `*.uf2` — precompiled Vial firmware to flash onto the keyboard

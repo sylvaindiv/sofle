@@ -232,6 +232,25 @@
     border-radius:4px;
     font-size:12px;
   }
+  .support-box{
+    max-width:1100px;
+    margin-top:20px;
+    padding:12px 16px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:13px;
+    color:var(--muted);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .support-box a{
+    color:var(--accent);
+    font-weight:600;
+    text-decoration:none;
+  }
+  .support-box a:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -319,6 +338,11 @@
 
 </div>
 
+<div class="support-box">
+  <span data-i18n="supportText">Found this useful?</span>
+  <a href="https://paypal.me/sylvaindiv" target="_blank" rel="noopener" data-i18n="supportLink">Buy me a coffee ☕</a>
+</div>
+
 <script>
 const MSG_LEN = 32;
 const RGB_MAX_V = 170; // must match RGB_MATRIX_MAXIMUM_BRIGHTNESS in the firmware
@@ -378,6 +402,8 @@ const I18N = {
     btnDeletePreset: "Delete",
     localStorageHint: "This stays in this browser (survives page reloads, but not a \"clear browsing data\").",
     statusTitle: "Status",
+    supportText: "Found this useful?",
+    supportLink: "Buy me a coffee ☕",
     errNoResponse: "No response from keyboard ({0})",
     errWebHidUnavailable: "WebHID unavailable — use Chrome or Edge.",
     errNoDeviceSelected: "No keyboard selected.",
@@ -456,6 +482,8 @@ const I18N = {
     btnDeletePreset: "Supprimer",
     localStorageHint: "Ça reste dans ce navigateur (survit aux rechargements de page, mais pas à un \"effacer les données de navigation\").",
     statusTitle: "Statut",
+    supportText: "Cet outil t'a été utile ?",
+    supportLink: "Offre-moi un café ☕",
     errNoResponse: "Pas de réponse du clavier ({0})",
     errWebHidUnavailable: "WebHID indisponible — utilise Chrome ou Edge.",
     errNoDeviceSelected: "Aucun clavier sélectionné.",
