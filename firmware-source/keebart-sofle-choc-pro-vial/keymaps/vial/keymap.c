@@ -169,6 +169,17 @@ static void apply_active_layer_to_direct_buffer(void) {
     memcpy(g_direct_mode_colors, rgb_layer_colors[rgb_active_layer], sizeof(g_direct_mode_colors));
 }
 
+// layer_state_set_user only ever fires on the master (the slave just scans
+// its own matrix and forwards raw key events — it never resolves layer
+// state itself), so without this the slave's rgb_active_layer/direct buffer
+// would never update and it would stay stuck showing BASE colors forever.
+void rgb_layer_active_sync_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
+    const uint8_t *layer = (const uint8_t *)in_data;
+    if (*layer >= RGB_LAYER_COUNT) return;
+    rgb_active_layer = *layer;
+    apply_active_layer_to_direct_buffer();
+}
+
 // --- Split sync ---
 // Only the USB-connected half receives raw HID reports, so RAM (and, on
 // save, EEPROM) updates need to be pushed to the other half explicitly.
@@ -284,6 +295,7 @@ void keyboard_post_init_user(void) {
     transaction_register_rpc(RGB_DIRECT_SYNC, rgb_direct_sync_slave_handler);
     transaction_register_rpc(RGB_STATE_QUERY, rgb_state_query_slave_handler);
     transaction_register_rpc(RGB_RAW_BYPASS_SYNC, rgb_raw_bypass_slave_handler);
+    transaction_register_rpc(RGB_LAYER_ACTIVE_SYNC, rgb_layer_active_sync_slave_handler);
 
     if (eeconfig_is_user_datablock_valid()) {
         eeconfig_read_user_datablock(rgb_layer_colors, 0, sizeof(rgb_layer_colors));
@@ -300,6 +312,12 @@ layer_state_t layer_state_set_user(layer_state_t state) {
     uint8_t layer  = get_highest_layer(state);
     rgb_active_layer = (layer < RGB_LAYER_COUNT) ? layer : BASE;
     apply_active_layer_to_direct_buffer();
+
+    if (is_keyboard_master()) {
+        if (!transaction_rpc_send(RGB_LAYER_ACTIVE_SYNC, sizeof(rgb_active_layer), &rgb_active_layer)) {
+            transaction_rpc_send(RGB_LAYER_ACTIVE_SYNC, sizeof(rgb_active_layer), &rgb_active_layer);
+        }
+    }
     return state;
 }
 
